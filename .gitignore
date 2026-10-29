@@ -1,0 +1,19 @@
+# Data stays local: Findex and Zindi terms forbid redistribution
+data/**
+!data/README.md
+
+# Models and caches
+models/
+*.joblib
+*.pkl
+__pycache__/
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
