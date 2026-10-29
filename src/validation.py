@@ -53,3 +53,26 @@ def cross_validate(model, df, cols, splits):
 def summarise(folds: pd.DataFrame) -> dict:
     return {"pr_auc": folds.pr_auc.mean(), "pr_auc_sd": folds.pr_auc.std(), "roc_auc": folds.roc_auc.mean(),
             "roc_auc_sd": folds.roc_auc.std(), "pr_lift": folds.pr_lift.mean(), "base_rate": folds.base_rate.mean()}
+
+
+def cross_validate_reg(model, df, cols, splits, target="log_amount_target"):
+    """Out-of-fold regression predictions on the log scale plus per-fold errors
+    on the log and currency scales."""
+    oof = np.full(len(df), np.nan)
+    fold_id = np.full(len(df), -1)
+    rows = []
+    X, y = df[cols], df[target].to_numpy()
+    for i, (a, b) in enumerate(splits):
+        p = clone(model).fit(X.iloc[a], y[a]).predict(X.iloc[b])
+        oof[b], fold_id[b] = p, i
+        rows.append(dict(fold=i, n_train=len(a), n_test=len(b), **regression_errors(y[b], p)))
+    return oof, fold_id, pd.DataFrame(rows)
+
+
+def regression_errors(y_log, p_log) -> dict:
+    e = p_log - y_log
+    amt, pred = np.expm1(y_log), np.expm1(p_log)
+    return {"rmse_log": float(np.sqrt(np.mean(e ** 2))), "mae_log": float(np.mean(np.abs(e))),
+            "rmse_amt": float(np.sqrt(np.mean((pred - amt) ** 2))), "mae_amt": float(np.mean(np.abs(pred - amt))),
+            "median_ae_amt": float(np.median(np.abs(pred - amt))),
+            "within_25pct": float(np.mean(np.abs(pred / amt - 1) <= 0.25))}
