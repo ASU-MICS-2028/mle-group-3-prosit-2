@@ -1,0 +1,17 @@
+column,role,reason
+ID,dropped,"Row key; concatenation of customer, loan and lender IDs"
+customer_id,group key,Not a feature. Groups CV folds and builds borrower history
+country_id,metadata,Constant (Kenya) in Train; used for Ghana analysis and macro join
+tbl_loan_id,group key,"Not a feature. 2,134 loans span two lender rows; dedupe or group on it"
+lender_id,usable,"Known at approval. 4 lenders in Train; 4 of 5 Ghana lenders unseen, needs an unknown level"
+loan_type,usable,"Product chosen at application. Ghana Type_3/Type_8 unseen, needs an unknown level"
+Total_Amount,usable (classifier),"Requested principal. Heavily skewed, log transform. Target of the regression, so not its input"
+Total_Amount_to_Repay,dropped (leakage),Inflated for defaulters on identical contracts; repay/amount AUC 0.98
+disbursement_date,usable (derived),"Approx. application date. Calendar features and time splits only, not raw"
+due_date,dropped,Exactly disbursement_date + duration
+duration,usable,Term chosen at application
+New_versus_Repeat,usable,Known from NkwaPay's own records; recomputable from history
+Amount_Funded_By_Lender,dropped,Exactly Lender_portion_Funded x Total_Amount
+Lender_portion_Funded,"usable, confirm",Funding split set when the loan is placed; confirm with NkwaPay it is fixed before approval
+Lender_portion_to_be_repaid,dropped (leakage),Lender_portion_Funded x Total_Amount_to_Repay; inherits leakage
+target,target,"1 = default, 0 = repaid; observed after due date"
