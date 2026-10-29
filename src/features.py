@@ -11,6 +11,8 @@ Rules enforced here (and tested in tests/test_features.py):
 Loans from Test are included as history (NkwaPay knows a customer's past loans)
 but contribute no outcomes, because their labels are unknown.
 """
+from functools import lru_cache
+
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -37,11 +39,13 @@ CATEGORICAL = ["loan_type", "lender_id"]
 NUMERIC = LOAN + HISTORY + CALENDAR + MACRO
 
 
-def history_features(loans: pd.DataFrame, lag_days: int = LABEL_LAG_DAYS) -> pd.DataFrame:
+def history_features(loans: pd.DataFrame, lag_days: int = LABEL_LAG_DAYS, prior=None) -> pd.DataFrame:
     """Borrower history from strictly earlier loans, indexed like `loans`.
 
     `loans` should hold every loan NkwaPay knows about (Train and Test). A
-    `target` that is NaN means the outcome is unknown to us.
+    `target` that is NaN means the outcome is unknown to us. `prior` fixes the
+    smoothing prior (the scoring service passes the portfolio rate stored at
+    training time, since it only sees one customer's loans).
     """
     cur = loans[["customer_id", "disbursement_date", "Total_Amount"]].reset_index(names="_row")
     past = loans[["customer_id", "disbursement_date", "due_date", "Total_Amount", "duration", "lender_id"]].assign(
@@ -72,7 +76,8 @@ def history_features(loans: pd.DataFrame, lag_days: int = LABEL_LAG_DAYS) -> pd.
     out = pd.DataFrame(index=loans.index)
     for c in ["n_prev_loans", "n_prev_resolved", "n_prev_defaults", "n_active_loans", "n_prev_lenders"]:
         out[c] = h[c].fillna(0).to_numpy().astype(int)
-    prior = known_default_rate(loans, lag_days)
+    if prior is None:
+        prior = known_default_rate(loans, lag_days)
     out["prev_default_rate"] = (out.n_prev_defaults + PRIOR_STRENGTH * prior) / (out.n_prev_resolved + PRIOR_STRENGTH)
     out["has_resolved_history"] = (out.n_prev_resolved > 0).astype(int)
     out["active_amount_log"] = np.log1p(h.active_amount.fillna(0).to_numpy())
@@ -112,6 +117,11 @@ def calendar_features(loans: pd.DataFrame) -> pd.DataFrame:
 
 def load_macro() -> pd.DataFrame:
     """Long table: country, year, indicator columns. FX change is year-on-year % depreciation."""
+    return _load_macro().copy()
+
+
+@lru_cache(maxsize=1)
+def _load_macro() -> pd.DataFrame:
     e = pd.read_csv(config.ECON_CSV)
     e = e[e.Indicator.isin(MACRO_INDICATORS)].assign(Indicator=lambda x: x.Indicator.map(MACRO_INDICATORS))
     long = e.melt(id_vars=["Country", "Indicator"], var_name="year", value_name="v")
@@ -140,9 +150,9 @@ def loan_features(loans: pd.DataFrame) -> pd.DataFrame:
     }, index=loans.index)
 
 
-def build_features(loans: pd.DataFrame, lag_days: int = LABEL_LAG_DAYS) -> pd.DataFrame:
+def build_features(loans: pd.DataFrame, lag_days: int = LABEL_LAG_DAYS, prior=None) -> pd.DataFrame:
     """All row-wise features for `loans` (no fitting, so safe to compute once before CV)."""
-    return pd.concat([loans[CATEGORICAL].astype(str), loan_features(loans), history_features(loans, lag_days),
+    return pd.concat([loans[CATEGORICAL].astype(str), loan_features(loans), history_features(loans, lag_days, prior),
                       calendar_features(loans), macro_features(loans)], axis=1)
 
 
