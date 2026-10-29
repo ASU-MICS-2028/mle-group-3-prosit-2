@@ -1,0 +1,31 @@
+,family,definition,missing_share,"AUC (train, univariate)"
+Lender_portion_Funded,loan,Summed lender share of the loan,0.0,0.567
+active_amount_log,history,log1p(amount still outstanding),0.0,0.3
+amount_per_day_log,loan,log1p(amount / duration),0.0,0.511
+amount_vs_prev_mean,history,Current amount / mean past amount,0.09,0.582
+days_since_last_default,history,Days since last observable default,0.999,0.499
+days_since_last_loan,history,Days since previous disbursement,0.09,0.695
+disb_day,calendar,Day of month,0.0,0.453
+disb_month,calendar,Month,0.0,0.432
+disb_month_end,calendar,Last 3 days of month,0.0,0.49
+disb_weekday,calendar,Weekday (0 = Monday),0.0,0.483
+duration,loan,Term in days,0.0,0.667
+has_resolved_history,history,Any observable past outcome,0.0,0.371
+is_new,loan,New_versus_Repeat == New,0.0,0.542
+lender_id,categorical,Primary lender (same grouping),0.0,
+loan_type,categorical,"Product (rare -> Other, unseen -> Unknown, fitted per fold)",0.0,
+log_amount,loan,log1p(Total_Amount),0.0,0.61
+macro_deposit_rate,macro,"Deposit rate, previous year",0.0,0.615
+macro_fx_change,macro,"Currency depreciation vs USD, previous year (%)",0.0,0.615
+macro_inflation,macro,"CPI inflation, previous year",0.0,0.596
+macro_unemployment,macro,"Unemployment, previous year",0.0,0.474
+n_active_loans,history,Earlier loans not yet due,0.0,0.27
+n_lenders,loan,Co-funding lenders (1 or 2),0.0,0.567
+n_prev_defaults,history,Observable earlier defaults,0.0,0.507
+n_prev_lenders,history,Distinct past lenders,0.0,0.423
+n_prev_loans,history,Loans disbursed on earlier dates,0.0,0.242
+n_prev_resolved,history,Earlier loans with an observable outcome,0.0,0.272
+prev_amount_max_log,history,log1p(max past amount),0.09,0.496
+prev_amount_mean_log,history,log1p(mean past amount),0.09,0.54
+prev_default_rate,history,"Smoothed past default rate (prior = portfolio rate known at the time, weight 5)",0.0,0.674
+prev_duration_mean,history,Mean past term,0.09,0.576
