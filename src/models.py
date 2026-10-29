@@ -20,6 +20,8 @@ from src.config import SEED
 
 MAIN_FEATURES = F.LOAN + F.HISTORY + F.CALENDAR       # macro excluded by default (Section 3.4)
 WITH_MACRO = MAIN_FEATURES + F.MACRO
+# Deployed classifier: calendar dropped (no predictive value out of time, but it moved individual scores; Section 9)
+DEPLOY_FEATURES = [c for c in MAIN_FEATURES if c not in F.CALENDAR]
 # Loan-size regression: nothing computed from the amount being predicted (Section 1.4)
 REG_FEATURES = [c for c in MAIN_FEATURES if c not in ("log_amount", "amount_per_day_log", "amount_vs_prev_mean")]
 
