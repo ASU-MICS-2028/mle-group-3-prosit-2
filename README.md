@@ -2,7 +2,7 @@
 
 Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and assessed for transfer to Ghana. Debrief: **Tuesday 3 November 2026**.
 
-**Deliverables:** report `reports/NkwaPay_Report_Group3.docx` (source `reports/report.md`) · slides `slides/NkwaPay_Debrief_Group3.pptx` · Model Card `docs/model_card.md` · decline letter `docs/decline_letter.md` · AI-use declaration `docs/ai_use_declaration.md` (draft, to sign) · reflection template `docs/reflection_template.md`.
+**Deliverables:** report `reports/NkwaPay_Report_Group3.docx` (source `reports/report.md`) · slides `slides/NkwaPay_Debrief_Group3.pptx` (plain-language version `slides/NkwaPay_Debrief_Simple.pptx`) · Model Card `docs/model_card.md` · Datasheet `docs/datasheet.md` · decline letter `docs/decline_letter.md` · AI-use declaration `docs/ai_use_declaration.md` (draft, to sign) · reflection template `docs/reflection_template.md`.
 
 ## Headline results
 
@@ -16,6 +16,19 @@ Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and asse
 | Loan size | Ridge on log amount (repaid loans), median error ~1,930 KES; first-loan cap needed |
 | Ghana | 87% unseen products, 96% unseen lenders, domain AUC 1.0. No automated Ghana decisions before a pilot |
 | Service | `Scorer.score()` → P(default), approve/decline/refer, 3 reasons, offer; ~20 ms per call |
+
+## Where each part of the brief is answered
+
+The brief suggests four notebooks (`01_eda`, `02_classification`, `03_regression`, `04_transfer_and_fairness`). We split the work into one notebook per workplan section instead; this table maps them.
+
+| Brief | Notebooks |
+|---|---|
+| Part A, framing and cost matrix | `01_problem_framing` |
+| `01_eda` (Part B1) | `02_eda` |
+| `02_classification` (Part B2 to B7) | `03_features`, `04_validation`, `05_classification`, `07_noise_floor`, `08_derivations`, `09_reason_codes`, `13_rubric_additions` (confusion matrix, approval-rate goal) |
+| `03_regression` (Part B4 to B5) | `06_regression`, `08_derivations` |
+| `04_transfer_and_fairness` (Parts C and D) | `10_ghana_transfer`, `11_ethics_regulation`, `13_rubric_additions` (PR-AUC and F1 by segment) |
+| Part E, scoring service | `12_scoring_service`, `src/scoring.py` |
 
 ## Layout
 
@@ -70,6 +83,7 @@ On macOS LightGBM is pinned to one thread (`n_jobs=1`); multithreaded fits were 
 | 11 Ethics and regulation (Part D) | | Done (Act 726 unverified) | `11_ethics_regulation.ipynb`, `docs/model_card.md`, `docs/decline_letter.md` |
 | 12 Scoring service (Part E) | | Done | `12_scoring_service.ipynb`, `src/scoring.py` |
 | 13 Report, slides, AI declaration | | Drafted, team review needed | `reports/`, `slides/`, `docs/ai_use_declaration.md` |
+| Rubric additions | | Done | `13_rubric_additions.ipynb` (confusion matrix, approval-rate goal, PR-AUC/F1 by segment, ±0.0263 noise floor), `docs/datasheet.md` |
 | 14 Individual reflection | everyone | To do | `docs/reflection_template.md` |
 
 ## Open items for the team
