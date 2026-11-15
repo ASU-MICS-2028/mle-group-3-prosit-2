@@ -34,5 +34,5 @@
 ## Caveats and recommendations
 - **Ghana:** 87% of Ghana loans are on unseen products and 96% on unseen lenders; a domain classifier separates Ghana from Kenya with AUC 1.0. Do not use for automated Ghana decisions until pilot outcomes allow recalibration and validation (Section 10).
 - **Drift:** performance roughly halved after Dec 2022. Recalibrate monthly on recent outcomes and monitor approval rate, default rate and mean prediction.
-- **Regulation:** no credit-bureau integration (BoG Directive §7.3; Act 726 reportedly requires a credit report). Act 726 and Act 1052 not reviewed from primary text.
+- **Regulation:** no credit-bureau integration, so the bureau search required before a credit decision (Act 726 s.26(4)) and bureau reporting (Act 726 s.24; BoG Directive §7.3) are not met. Act 1052 not reviewed from primary text.
 - Cost-matrix figures are assumptions; replace with NkwaPay's own.
