@@ -9,7 +9,10 @@ where known. Features are built with the same code as training
 (src/features.py), so there is no separate re-implementation to drift.
 
 Decision policy (Sections 5, 6, 10 and 11):
-- decline      P(default) > threshold and the applicant has a repayment record
+- decline      P(default) > threshold and the applicant has a repayment record,
+               or the applicant has an earlier loan on record that was not
+               repaid (Section 13.6: such borrowers default about 18% of the
+               time, but too few exist for the model to learn it)
 - refer        thin-file applicant above threshold: starter-loan track or human
                review instead of an automatic decline (Section 11.3), or any
                market the model was not trained for (Section 10)
@@ -28,7 +31,7 @@ from src import models as M
 from src.config import MODELS
 from src.costs import LoanEconomics
 from src.data import load_loans
-from src.reasons import ReasonCoder
+from src.reasons import TEXT, ReasonCoder
 
 VERSION = "nkwapay-v1"
 TRAINED_MARKETS = {"Kenya"}
@@ -127,6 +130,7 @@ class Scorer:
         top = self.reasons.top_reasons(X[M.inputs(M.DEPLOY_FEATURES)])[0]
         limit = float(np.expm1(self.limit_model.predict(X[M.inputs(M.REG_FEATURES)])[0]))
         thin_file = int(X.n_prev_resolved.iloc[0]) == 0
+        past_default = int(X.n_prev_defaults.iloc[0]) >= 1
         requested = float(application["Total_Amount"])
 
         if application["country_id"] not in TRAINED_MARKETS:
@@ -135,8 +139,12 @@ class Scorer:
             decision, note = "refer", "No repayment record: starter-loan track or human review, not automatic decline (Section 11.3)."
         elif p > self.threshold:
             decision, note = "decline", "Estimated default risk above the cost threshold."
+        elif past_default:
+            decision, note = "decline", "Earlier loan on record was not repaid (policy rule, Section 13.6)."
         else:
             decision, note = "approve", ""
+        if past_default and not any(r["code"] == "REPAYMENT" for r in top):
+            top = [{"code": "REPAYMENT", "log_odds": None, "text": TEXT["REPAYMENT"]}] + top[:2]
         offer = None
         if decision == "approve":
             offer = min(requested, limit)

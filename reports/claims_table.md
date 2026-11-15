@@ -1,6 +1,6 @@
 # Claims table
 
-Every number below is quoted in the report, the README or the slides. The "Source" column says which notebook produces it, and the ID is the check in `scripts/verify_claims.py` that recomputes it from the raw files. Run `make verify` to recheck all of them; the last run reproduced 50 of 50.
+Every number below is quoted in the report, the README or the slides. The "Source" column says which notebook produces it, and the ID is the check in `scripts/verify_claims.py` that recomputes it from the raw files. Run `make verify` to recheck all of them; the last run reproduced 56 of 56.
 
 Numbers that are not in this table (for example the bootstrap intervals, the regression errors and the domain-classifier AUC) come straight from the notebook named beside them in the report and are saved in `reports/*.csv`. They are not independently recomputed.
 
@@ -56,3 +56,9 @@ Numbers that are not in this table (for example the bootstrap intervals, the reg
 | C48 | Ghana adults who borrowed any money | 52% | `11_ethics_regulation` §11.5 |
 | C49 | Account ownership, women | 63% | `11_ethics_regulation` §11.5 |
 | C50 | Account ownership, men | 74% | `11_ethics_regulation` §11.5 |
+| C51 | Good borrowers with no repayment record who score above the threshold | 22% | `13_rubric_additions` §13.5 |
+| C52 | Thin-file applicants above the threshold, out of time | 665 | `13_rubric_additions` §13.5 |
+| C53 | Of those, repaid | 539 | `13_rubric_additions` §13.5 |
+| C54 | Train loans made after an earlier default was on record | 89 | `13_rubric_additions` §13.6 |
+| C55 | Default rate of those loans | 18% | `13_rubric_additions` §13.6 |
+| C56 | Such applicants approved by the model alone, out of time | 29 | `13_rubric_additions` §13.6 |

@@ -18,7 +18,8 @@ Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and asse
 | Loan size | Ridge on log amount (repaid loans), median error ~1,930 KES; first-loan cap needed |
 | Ghana | 87% unseen products, 96% unseen lenders, domain AUC 1.0. No automated Ghana decisions before a pilot |
 | Service | `Scorer.score()` → P(default), approve/decline/refer, 3 reasons, offer; ~20 ms per call. Saved model shipped in `models/nkwapay-v1.joblib` |
-| Checked | `make verify` recomputes 50 quoted numbers from the raw files; all 50 reproduce (`reports/claims_table.md`) |
+| Fairness cost | A 10% starter loan for applicants with no repayment record costs about 1% of portfolio value and stops 539 good borrowers being turned away |
+| Checked | `make verify` recomputes 56 quoted numbers from the raw files; all 56 reproduce (`reports/claims_table.md`) |
 
 ## Where each part of the brief is answered
 
@@ -47,14 +48,14 @@ To edit the diagram, open `docs/architecture.drawio.svg` in draw.io (app.diagram
 data/raw/         raw files (gitignored, see data/README.md)
 data/processed/   features and out-of-fold predictions (gitignored, rebuilt by the notebooks)
 docs/             Model Card, Datasheet, decline letter, AI declaration, architecture diagram (draw.io), legal texts
-examples/         four made-up applications for the scorer: approve, decline, refer (first loan), refer (Ghana)
+examples/         five made-up applications for the scorer: approve, decline, earlier unpaid loan, refer (first loan), refer (Ghana)
 models/           the saved scoring service, nkwapay-v1.joblib (20 KB; rebuilt by notebook 12)
 notebooks/        one notebook per section, 01 to 13
 reports/          report, claims table, figures and result tables
 scripts/          run_all.sh (everything), verify_claims.py (recheck numbers), score.py (score one application)
 slides/           debrief deck and its build script
 src/              shared code: data, features, models, validation, costs, bootstrap, reasons, scoring
-tests/            31 pytest checks (data, leakage replay, loan merge, reasons, scoring service, shipped model)
+tests/            33 pytest checks (data, leakage replay, loan merge, reasons, scoring service, shipped model)
 ```
 
 ## Score an application (no data needed)
@@ -64,7 +65,7 @@ pip install -r requirements.txt
 python scripts/score.py examples/application_decline.json
 ```
 
-The file holds one `application` and the applicant's earlier loans as `history`; the fields are listed in notebook 12 and in `src/scoring.py`. The answer is JSON with the default probability, the decision (`approve`, `decline` or `refer`), up to three plain-language reasons and the offered amount. `make score` runs all four examples. The examples are invented; they are not rows from the data.
+The file holds one `application` and the applicant's earlier loans as `history`; the fields are listed in notebook 12 and in `src/scoring.py`. The answer is JSON with the default probability, the decision (`approve`, `decline` or `refer`), up to three plain-language reasons and the offered amount. `make score` runs all five examples. The examples are invented; they are not rows from the data.
 
 The saved model holds the fitted coefficients, the preprocessing averages and the threshold. It contains no loan records.
 
@@ -107,8 +108,8 @@ This takes about 15 minutes. It checks the data, runs notebooks 01 to 13 in orde
 | Command | What it does |
 |---|---|
 | `make check` | confirms the raw files are present with the expected shapes |
-| `make test` | runs the 31 tests |
-| `make verify` | recomputes 50 quoted numbers from the raw files (about 10 seconds) |
+| `make test` | runs the 33 tests |
+| `make verify` | recomputes 56 quoted numbers from the raw files (about 10 seconds) |
 | `make report` | rebuilds the report from `reports/report.md` |
 | `make slides` | rebuilds the debrief deck |
 | `make score` | scores the example applications |
@@ -185,7 +186,7 @@ Each member submits an individual reflection separately.
 
 Declared under the course AI policy (brief, Appendix B3). We used an AI assistant (Claude Code) to scaffold the repository, to draft and debug the notebook, module and script code, to draft report and slide text, and to rerun the notebooks and recheck the quoted numbers.
 
-- Every number in the report comes from a notebook. Fifty of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
+- Every number in the report comes from a notebook. Fifty-six of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
 - AI-drafted statements that did not match the outputs were corrected, for example the direction of the "loan size" reason code and the share of co-funded Ghana loans.
 - The regulatory mapping was written from the legal texts in `docs/legal/`.
 - Each member's individual reflection gives their own declaration.

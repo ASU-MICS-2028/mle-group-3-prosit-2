@@ -12,6 +12,7 @@ EXAMPLES = ROOT / "examples"
 EXPECTED = {
     "application_repeat.json": "approve",
     "application_decline.json": "decline",
+    "application_past_default.json": "decline",
     "application_first_loan.json": "refer",
     "application_ghana.json": "refer",
 }
@@ -38,3 +39,11 @@ def test_examples(scorer, name, decision):
         assert out["reasons"] == [] and out["offered_amount"] <= request["application"]["Total_Amount"]
     else:
         assert 1 <= len(out["reasons"]) <= 3 and out["offered_amount"] is None
+
+
+def test_earlier_default_is_never_auto_approved(scorer):
+    """The model alone scores this applicant just under the threshold; the policy rule must decline."""
+    request = json.loads(Path(EXAMPLES / "application_past_default.json").read_text())
+    out = scorer.score(request["application"], request["history"])
+    assert out["p_default"] <= scorer.threshold
+    assert out["decision"] == "decline" and out["reasons"][0]["code"] == "REPAYMENT"

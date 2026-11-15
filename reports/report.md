@@ -1,6 +1,11 @@
 ---
 title: "NkwaPay Credit Scoring: Kenya Model, Ghana Launch"
 subtitle: "ICS553 Prosit 2, Group 3"
+author:
+  - Mubarak Tijani
+  - Eric Elikplim Sunu
+  - Clifford Yeboah
+  - Adzeyena Opei
 date: "3 November 2026"
 ---
 
@@ -117,6 +122,8 @@ Before trusting Ghana scores NkwaPay needs: outcomes from a capped pilot; recali
 
 **Proxies.** The data holds no protected attributes, so we tested proxies. Borrowing history is the strongest candidate. Removing all six history features changed almost nothing (PR-AUC 0.145 to 0.144; good thin-file borrowers still declined 27% of the time), because missing past amounts and the lack of any repayment record identify the same people. Dropping a proxy does not remove it. Our mitigation is a policy: no automatic decline for applicants without a repayment record, a capped starter loan instead, monthly parity monitoring by history band, and a consented demographic sample kept apart from scoring for audits.
 
+**What the mitigation costs** (`13_rubric_additions.ipynb` §13.5). Without it, 22% of good borrowers with no repayment record would be turned away, against 1.6% of good borrowers who have one. It applies to 665 out-of-time applicants (1.7% of all), 539 of whom repaid. They default 19% of the time, so the first loan loses money at any size: about GHS 12 per affected applicant for a starter loan at 10% of the usual size and GHS 52 for a full-size loan. Across all applications the 10% starter costs about GHS 200 per 1,000, roughly 1% of the portfolio's value. We recommend it as the price of access and of information: 58% of the good borrowers in this group borrowed again.
+
 **Findex 2021 Ghana (survey-weighted).** 60% of adults have a mobile money account, but only 7% borrowed from a formal institution in the past year, while 52% borrowed some money. Account ownership is clearly lower for women (63% against 74%), the poorest 40% (55% against 77%), the least educated and rural adults (57% against 76%). Mobile-money borrowing is not lower for these groups. Digital credit already reaches them, and they arrive with thin formal records, which is exactly the profile the model penalises.
 
 **Regulation.** From the documents we read: the BoG Digital Credit Directive (2025) requires clear disclosure (§6.1, §7.1), complaint resolution within 20 days (§6.1(e)), no harassment in collection (§7.2) and daily, consented reporting to credit bureaus (§7.3). The Data Protection Act 2012 (Act 843) requires minimality (s.19), a lawful basis (s.20), data quality (s.26), access and correction (s.32 to 33) and no processing of special personal data (s.37). Section 41 gives a right to notice and reconsideration within 21 days for decisions taken solely by automated means; s.41(4) exempts decisions about entering a contract, which may cover credit, but we design as if it applies. The Credit Reporting Act 2007 (Act 726) requires a lender to search the applicant's record at a licensed credit bureau before deciding to grant or refuse credit (s.26(4)), to get written consent before sending credit information to a bureau (s.26(1)), and to submit each loan within 72 hours and its repayment status monthly (s.24(3)). It also forbids asking borrowers for race, ethnic origin, political, religious or union affiliation (s.24(4)), which we meet. Our system does none of the bureau steps. What we cannot meet with the model alone: bureau checks and reporting, Ghana-specific accuracy, group fairness against protected traits, and organisational duties such as registration and breach notification.
@@ -125,7 +132,7 @@ The Datasheet for the data is in `docs/datasheet.md`. The Model Card is in `docs
 
 # 11. Scoring service (Part E)
 
-`Scorer.score(application, history)` returns the default probability, a decision, the top three reasons and an offered amount. It uses the same feature code as training; a test shows it rebuilds identical features for random Train loans. The policy has three outcomes: **approve** (offer the smaller of the request and the predicted limit, capped for first loans), **decline** (above the threshold, with a repayment record), and **refer** (thin-file applicants above the threshold, and any market other than Kenya). A call takes about 20 ms (p95 32 ms), and batch scoring runs at about 115,000 loans per second. The app sends nine application fields and the applicant's earlier loans with outcomes; no personal or sensitive attributes are needed.
+`Scorer.score(application, history)` returns the default probability, a decision, the top three reasons and an offered amount. It uses the same feature code as training; a test shows it rebuilds identical features for random Train loans. The policy has three outcomes: **approve** (offer the smaller of the request and the predicted limit, capped for first loans), **decline** (above the threshold, with a repayment record), and **refer** (thin-file applicants above the threshold, and any market other than Kenya). One rule sits on top of the model: an applicant with an earlier unpaid loan on record is never approved automatically. Only 89 training loans went to such borrowers, 18% of them defaulted (95% interval 11% to 27%), and with so few examples the model approved 29 of 81 of them out of time; a test applicant with three unpaid loans scored 6.1%, just under the threshold (§13.6). A call takes about 20 ms (p95 32 ms), and batch scoring runs at about 115,000 loans per second. The app sends nine application fields and the applicant's earlier loans with outcomes; no personal or sensitive attributes are needed.
 
 # 12. Limitations and next steps
 
@@ -133,13 +140,13 @@ The cost matrix uses our own figures. The default rule and the timing of `Lender
 
 # 13. Reproducibility
 
-Everything in this report is produced by the code in the repository, with `random_state = 42` throughout and package versions pinned in `requirements.txt`. With the data files in `data/raw/` (sources in `data/README.md`), `make` reruns the thirteen notebooks in order, the tests, the claim check, this report and the slides in about 15 minutes on a laptop. `scripts/verify_claims.py` recomputes 50 of the numbers quoted here from the raw files, independently of the notebooks, and `reports/claims_table.md` lists where each one comes from. The saved model ships in `models/nkwapay-v1.joblib`, and `python scripts/score.py examples/application_repeat.json` scores an application without any training data. The raw data is not in the repository because the Zindi and Findex terms do not allow redistribution.
+Everything in this report is produced by the code in the repository, with `random_state = 42` throughout and package versions pinned in `requirements.txt`. With the data files in `data/raw/` (sources in `data/README.md`), `make` reruns the thirteen notebooks in order, the tests, the claim check, this report and the slides in about 15 minutes on a laptop. `scripts/verify_claims.py` recomputes 56 of the numbers quoted here from the raw files, independently of the notebooks, and `reports/claims_table.md` lists where each one comes from. The saved model ships in `models/nkwapay-v1.joblib`, and `python scripts/score.py examples/application_repeat.json` scores an application without any training data. The raw data is not in the repository because the Zindi and Findex terms do not allow redistribution.
 
 # 14. AI-use declaration
 
 Declared under the course AI policy (brief, Appendix B3). We used an AI assistant (Claude Code) to scaffold the repository, to draft and debug the notebook, module and script code, to draft report and slide text, and to rerun the notebooks and recheck the quoted numbers.
 
-- Every number in the report comes from a notebook. Fifty of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
+- Every number in the report comes from a notebook. Fifty-six of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
 - AI-drafted statements that did not match the outputs were corrected, for example the direction of the "loan size" reason code and the share of co-funded Ghana loans.
 - The regulatory mapping was written from the legal texts in `docs/legal/`.
 - Each member's individual reflection gives their own declaration.

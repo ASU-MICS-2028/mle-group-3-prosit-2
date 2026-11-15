@@ -135,6 +135,17 @@ def model_checks():
     check("C41", "Approval rate, 2022 regime (%)", 98.8, 100 * (1 - declined[~late].mean()), 0.05)
     check("C42", "Approval rate, from Dec 2022 (%)", 68.6, 100 * (1 - declined[late].mean()), 0.05)
 
+    thin = (tr.n_prev_resolved == 0).to_numpy()[tested]
+    referred = thin & declined
+    check("C51", "Good borrowers with no repayment record above the threshold (%)", 22, 100 * declined[thin & (y == 0)].mean(), 0.5)
+    check("C52", "Thin-file applicants above the threshold", 665, int(referred.sum()), 0)
+    check("C53", "Of those, repaid", 539, int((referred & (y == 0)).sum()), 0)
+    had = tr.n_prev_defaults >= 1
+    check("C54", "Train loans made after an earlier default was on record", 89, int(had.sum()), 0)
+    check("C55", "Default rate of those loans (%)", 18, 100 * tr.target[had].mean(), 0.5)
+    past = (tr.n_prev_defaults >= 1).to_numpy()[tested]
+    check("C56", "Such applicants approved by the model alone, out of time", 29, int((past & ~declined).sum()), 0)
+
     saved = config.MODELS / "nkwapay-v1.joblib"
     if saved.exists():
         from src.scoring import Scorer
