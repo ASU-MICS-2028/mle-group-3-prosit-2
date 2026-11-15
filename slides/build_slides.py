@@ -96,7 +96,7 @@ slide("Kenya changed in December 2022",
       takeaway="This is our best Kenyan proxy for a new market, and the model barely copes.")
 
 slide("Model choice and the money",
-      ["12 candidates on temporal folds; class weights never helped and broke calibration",
+      ["14 candidates on temporal folds; class weights never helped and broke calibration",
        "LogReg: best PR-AUC (0.143), best after Dec 2022; shallow LightGBM: best ROC",
        "Bootstrap: LogReg ≈ LightGBM on PR-AUC overall; LogReg significantly better after Dec 2022",
        "Per 1,000 applications after Dec 2022: approve-all −16,600 GHS; LogReg at 0.062 −3,500"],

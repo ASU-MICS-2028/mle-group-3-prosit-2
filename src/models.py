@@ -8,11 +8,13 @@ from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyClassifier, DummyRegressor
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LinearRegression, LogisticRegression, Ridge
+from sklearn.linear_model import Lasso, LinearRegression, LogisticRegression, Ridge
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline, make_pipeline
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
+from sklearn.svm import SVC, SVR
 from sklearn.tree import DecisionTreeClassifier
 
 from src import features as F
@@ -69,6 +71,18 @@ def forest(numeric=MAIN_FEATURES, class_weight=None, n_estimators=300, min_sampl
                                                       n_jobs=4, random_state=SEED))])
 
 
+def knn(numeric=MAIN_FEATURES, k=100) -> Pipeline:
+    """k nearest neighbours on standardised inputs; the score is the share of defaults among the k neighbours."""
+    return Pipeline([("prep", preprocessor(numeric, scale=True)), ("model", KNeighborsClassifier(n_neighbors=k))])
+
+
+def svc(numeric=MAIN_FEATURES, C=1.0) -> ImbPipeline:
+    """RBF support vector classifier. Kernel SVMs scale with the square of the sample size, so it is
+    trained on every default plus ten repaid loans per default from the training fold."""
+    return undersampled(Pipeline([("prep", preprocessor(numeric, scale=True)),
+                                  ("model", SVC(kernel="rbf", C=C, gamma="scale", probability=True, random_state=SEED))]))
+
+
 def undersampled(pipe: Pipeline, ratio: float = 0.1) -> ImbPipeline:
     """Random undersampling of repaid loans to `ratio` defaults per repaid loan.
     It sits inside the pipeline, so it only ever touches the training fold."""
@@ -115,6 +129,34 @@ def linreg(numeric=REG_FEATURES, log_terms=LOG_TERMS) -> ClippedRegressor:
 def ridge(numeric=REG_FEATURES, alpha=10.0) -> ClippedRegressor:
     return ClippedRegressor(Pipeline([("prep", preprocessor(numeric, scale=True, log_cols=LOG_TERMS)),
                                       ("model", Ridge(alpha=alpha, random_state=SEED))]))
+
+
+def lasso(numeric=REG_FEATURES, alpha=0.001) -> ClippedRegressor:
+    return ClippedRegressor(Pipeline([("prep", preprocessor(numeric, scale=True, log_cols=LOG_TERMS)),
+                                      ("model", Lasso(alpha=alpha, max_iter=10_000, random_state=SEED))]))
+
+
+class Subsampled(BaseEstimator, RegressorMixin):
+    """Fit on at most `max_rows` randomly chosen training rows (for estimators that scale badly, such as SVR)."""
+
+    def __init__(self, estimator, max_rows=10_000, seed=SEED):
+        self.estimator, self.max_rows, self.seed = estimator, max_rows, seed
+
+    def fit(self, X, y):
+        idx = np.arange(len(X))
+        if len(idx) > self.max_rows:
+            idx = np.sort(np.random.default_rng(self.seed).choice(idx, self.max_rows, replace=False))
+        self.estimator_ = clone(self.estimator).fit(X.iloc[idx], np.asarray(y)[idx])
+        return self
+
+    def predict(self, X):
+        return self.estimator_.predict(X)
+
+
+def svr(numeric=REG_FEATURES, C=1.0, epsilon=0.1) -> ClippedRegressor:
+    """RBF support vector regression on a 10,000-loan sample of each training fold."""
+    return ClippedRegressor(Subsampled(Pipeline([("prep", preprocessor(numeric, scale=True, log_cols=LOG_TERMS)),
+                                                 ("model", SVR(kernel="rbf", C=C, epsilon=epsilon, gamma="scale"))])))
 
 
 def lgbm_reg(numeric=REG_FEATURES, **params) -> ClippedRegressor:
