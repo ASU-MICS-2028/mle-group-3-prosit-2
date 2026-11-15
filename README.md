@@ -35,53 +35,18 @@ The brief suggests four notebooks (`01_eda`, `02_classification`, `03_regression
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  subgraph raw["data/raw (not committed)"]
-    Z["Zindi Train / Test"]
-    E["Macro indicators"]
-    FX["Findex Ghana 2021"]
-  end
-  subgraph src["src/ (shared code, tested)"]
-    D["data.py<br/>one row per loan"]
-    FE["features.py<br/>time-safe history"]
-    V["validation.py<br/>temporal folds"]
-    M["models.py"]
-    C["costs.py<br/>cedi threshold"]
-    R["reasons.py"]
-    S["scoring.py"]
-  end
-  subgraph nb["notebooks 01 to 13"]
-    N1["01-04 framing, EDA,<br/>features, validation"]
-    N2["05-09 models, noise floor,<br/>derivations, reasons"]
-    N3["10-11 Ghana transfer,<br/>ethics and regulation"]
-    N4["12 scoring service"]
-  end
-  Z --> D --> FE --> N1 --> N2 --> N3
-  E --> FE
-  FX --> N3
-  V --> N2
-  M --> N2
-  C --> N2
-  R --> N2
-  N2 --> N4
-  S --> N4
-  N4 --> MOD["models/nkwapay-v1.joblib"]
-  MOD --> CLI["scripts/score.py<br/>one application in, decision out"]
-  N3 --> OUT["reports/, docs/, slides/"]
-  N2 --> OUT
-  Z --> VC["scripts/verify_claims.py"]
-  VC -. "rechecks the numbers in" .-> OUT
-```
+![NkwaPay architecture](docs/architecture.drawio.svg)
 
 The raw files are read only through `src/data.py`, which merges co-funded rows into one row per loan. The notebooks import everything that learns from data from `src/`, so the scoring service uses the same feature code as training. `scripts/verify_claims.py` goes back to the raw files and recomputes the numbers quoted in the report on its own.
+
+To edit the diagram, open `docs/architecture.drawio.svg` in draw.io (app.diagrams.net or the desktop app) and save it back in the same format.
 
 ## Layout
 
 ```
 data/raw/         raw files (gitignored, see data/README.md)
 data/processed/   features and out-of-fold predictions (gitignored, rebuilt by the notebooks)
-docs/             Model Card, Datasheet, decline letter, AI declaration, legal texts (BoG Directive, Act 843, Act 726)
+docs/             Model Card, Datasheet, decline letter, AI declaration, architecture diagram (draw.io), legal texts
 examples/         four made-up applications for the scorer: approve, decline, refer (first loan), refer (Ghana)
 models/           the saved scoring service, nkwapay-v1.joblib (20 KB; rebuilt by notebook 12)
 notebooks/        one notebook per workplan section, 01 to 13
