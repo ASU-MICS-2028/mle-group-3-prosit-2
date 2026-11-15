@@ -1,0 +1,14 @@
+{
+  "application": {
+    "customer_id": 900003,
+    "country_id": "Ghana",
+    "loan_type": "Type_3",
+    "lender_id": 296542,
+    "lenders": [{"lender_id": 296542, "share": 0.5}, {"lender_id": 245684, "share": 0.5}],
+    "Total_Amount": 500,
+    "duration": 30,
+    "application_date": "2023-02-10",
+    "New_versus_Repeat": "New Loan"
+  },
+  "history": []
+}

@@ -2,9 +2,10 @@
 data/**
 !data/README.md
 
-# Models and caches
-models/
-*.joblib
+# Models and caches. The one deployed model is committed so the scoring service runs without the data;
+# it holds coefficients and averages only, no loan rows.
+models/*
+!models/nkwapay-v1.joblib
 *.pkl
 __pycache__/
 .pytest_cache/

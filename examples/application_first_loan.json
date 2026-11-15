@@ -1,0 +1,14 @@
+{
+  "application": {
+    "customer_id": 900002,
+    "country_id": "Kenya",
+    "loan_type": "Type_4",
+    "lender_id": 267278,
+    "lenders": [{"lender_id": 267278, "share": 0.3}],
+    "Total_Amount": 60000,
+    "duration": 120,
+    "application_date": "2023-03-01",
+    "New_versus_Repeat": "New Loan"
+  },
+  "history": []
+}

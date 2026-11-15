@@ -1,0 +1,17 @@
+{
+  "application": {
+    "customer_id": 900004,
+    "country_id": "Kenya",
+    "loan_type": "Type_4",
+    "lender_id": 267278,
+    "lenders": [{"lender_id": 267278, "share": 0.3}],
+    "Total_Amount": 40000,
+    "duration": 90,
+    "application_date": "2023-03-01",
+    "New_versus_Repeat": "Repeat Loan"
+  },
+  "history": [
+    {"disbursement_date": "2022-11-01", "due_date": "2022-11-08", "Total_Amount": 5000, "duration": 7, "lender_id": 267278, "target": 0},
+    {"disbursement_date": "2022-12-01", "due_date": "2022-12-31", "Total_Amount": 20000, "duration": 30, "lender_id": 267278, "target": 1}
+  ]
+}
