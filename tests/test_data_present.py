@@ -1,4 +1,4 @@
-"""Check everyone has the same raw data as the workplan (checked 28 Oct)."""
+"""Check the raw data files are present with the expected shapes."""
 import pandas as pd
 import pytest
 

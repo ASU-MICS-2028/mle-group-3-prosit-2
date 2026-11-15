@@ -1,4 +1,4 @@
-"""No feature may use information from after the decision point (workplan 3, last task).
+"""No feature may use information from after the decision point (Section 3).
 
 Replay test: for a decision date D, rebuild the world as NkwaPay saw it on D
 (only loans disbursed on or before D; outcomes only where observable before D)

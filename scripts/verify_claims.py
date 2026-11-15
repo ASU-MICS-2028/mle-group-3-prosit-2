@@ -169,7 +169,7 @@ def main() -> int:
     for cid, what, quoted, got, ok in RESULTS:
         print(f"{cid:<4} {what:<{width}} {quoted:>10,.4g} {got:>12,.4f}  {'ok' if ok else 'MISMATCH'}")
     bad = [r for r in RESULTS if not r[-1]]
-    print(f"\n{len(RESULTS) - len(bad)} of {len(RESULTS)} claims reproduce." + ("" if not bad else " Fix the mismatches above."))
+    print(f"\n{len(RESULTS) - len(bad)} of {len(RESULTS)} claims reproduce." + ("" if not bad else " See the rows marked MISMATCH."))
     return 1 if bad else 0
 
 

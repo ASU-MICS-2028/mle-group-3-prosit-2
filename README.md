@@ -4,7 +4,7 @@ Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and asse
 
 > **Want to try the scorer?** `python scripts/score.py examples/application_repeat.json` works straight after `pip install -r requirements.txt`; the saved model is in `models/` and needs no data. To rerun the whole analysis, follow [Running it on your own machine](#running-it-on-your-own-machine).
 
-**Deliverables:** report `reports/NkwaPay_Report_Group3.pdf` (also `.docx`; source `reports/report.md`) · slides `slides/NkwaPay_Debrief_Group3.pptx` (plain-language version `slides/NkwaPay_Debrief_Simple.pptx`) · Model Card `docs/model_card.md` · Datasheet `docs/datasheet.md` · decline letter `docs/decline_letter.md` · AI-use declaration `docs/ai_use_declaration.md` (draft, to sign) · reflection template `docs/reflection_template.md`.
+**Deliverables:** report `reports/NkwaPay_Report_Group3.pdf` (also `.docx`; source `reports/report.md`) · slides `slides/NkwaPay_Debrief_Group3.pptx` (plain-language version `slides/NkwaPay_Debrief_Simple.pptx`) · Model Card `docs/model_card.md` · Datasheet `docs/datasheet.md` · decline letter `docs/decline_letter.md` · AI-use declaration `docs/ai_use_declaration.md`.
 
 ## Headline results
 
@@ -22,7 +22,7 @@ Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and asse
 
 ## Where each part of the brief is answered
 
-The brief suggests four notebooks (`01_eda`, `02_classification`, `03_regression`, `04_transfer_and_fairness`). We split the work into one notebook per workplan section instead; this table maps them.
+The brief suggests four notebooks (`01_eda`, `02_classification`, `03_regression`, `04_transfer_and_fairness`). We split the work into one notebook per section instead; this table maps them.
 
 | Brief | Notebooks |
 |---|---|
@@ -49,7 +49,7 @@ data/processed/   features and out-of-fold predictions (gitignored, rebuilt by t
 docs/             Model Card, Datasheet, decline letter, AI declaration, architecture diagram (draw.io), legal texts
 examples/         four made-up applications for the scorer: approve, decline, refer (first loan), refer (Ghana)
 models/           the saved scoring service, nkwapay-v1.joblib (20 KB; rebuilt by notebook 12)
-notebooks/        one notebook per workplan section, 01 to 13
+notebooks/        one notebook per section, 01 to 13
 reports/          report, claims table, figures and result tables
 scripts/          run_all.sh (everything), verify_claims.py (recheck numbers), score.py (score one application)
 slides/           debrief deck and its build script
@@ -126,7 +126,7 @@ On macOS LightGBM is pinned to one thread (`n_jobs=1`); multithreaded fits were 
 | `ModuleNotFoundError` | Activate the environment from step 1 and reinstall the requirements. |
 | `FileNotFoundError: ... features.pkl` | A notebook was run out of order. Run `make`, or run 03 first. |
 | `Saved model not found` | Run `notebooks/12_scoring_service.ipynb`, which trains and saves it. |
-| `MISMATCH` from `make verify` | A quoted number no longer matches the data. Fix the text or the code before submitting. |
+| `MISMATCH` from `make verify` | A quoted number no longer matches the data. Check which is right, the text or the code, and correct it. |
 
 ## Known data issues
 
@@ -145,38 +145,47 @@ Found while doing the analysis; each is documented in `docs/datasheet.md` or the
 
 ## Conventions
 
-- Notebooks are named `NN_topic.ipynb` to match the workplan sections.
+- Notebooks are named `NN_topic.ipynb`, one per section.
 - Shared logic goes in `src/` with a test, not in notebooks.
 - Branch per section (`section/03-features`), merge into `main`.
 - `random_state=SEED` (42) everywhere; call `set_seed()` at the top of each notebook.
 
-## Progress tracker
+## Team
 
-| Section | Owner | Status | Notebook / output |
-|---|---|---|---|
-| 0 Setup | | Done | repo, `requirements.txt`, `tests/test_data_present.py` |
-| 1 Framing (Part A) | | Done | `01_problem_framing.ipynb`, `src/schema.py`, `src/costs.py` |
-| 2 EDA (B1) | | Done | `02_eda.ipynb`, `src/data.py` |
-| 3 Features (B2) | | Done | `03_features.ipynb`, `src/features.py`, `tests/test_features.py` |
-| 4 Validation (B3) | | Done | `04_validation.ipynb`, `src/validation.py` |
-| 5 Classification (B4–B5) | | Done | `05_classification.ipynb`, `src/models.py` |
-| 6 Regression (B4–B5) | | Done | `06_regression.ipynb` |
-| 7 Noise floor (B6) | | Done | `07_noise_floor.ipynb`, `src/bootstrap.py` |
-| 8 Derivations (LO3) | | Done | `08_derivations.ipynb` |
-| 9 Reason codes (B7) | | Done | `09_reason_codes.ipynb`, `src/reasons.py` |
-| 10 Ghana transfer (Part C) | | Done | `10_ghana_transfer.ipynb` |
-| 11 Ethics and regulation (Part D) | | Done | `11_ethics_regulation.ipynb`, `docs/model_card.md`, `docs/decline_letter.md` |
-| 12 Scoring service (Part E) | | Done | `12_scoring_service.ipynb`, `src/scoring.py` |
-| 13 Report, slides, AI declaration | | Drafted, team review needed | `reports/`, `slides/`, `docs/ai_use_declaration.md` |
-| Rubric additions | | Done | `13_rubric_additions.ipynb` (confusion matrix, approval-rate goal, PR-AUC/F1 by segment, ±0.0263 noise floor), `docs/datasheet.md` |
-| Submission checks | | Done | `scripts/verify_claims.py`, `reports/claims_table.md`, `Makefile`, shipped model and `scripts/score.py`, Act 726 mapped from its text |
-| 14 Individual reflection | everyone | To do | `docs/reflection_template.md` |
+ICS553 Machine Learning Essentials · MICS 2028 · Group 3
 
-## Open items for the team
+| Member | GitHub | Led |
+|---|---|---|
+| Mubarak Tijani | `Xenongt1` | Repository and pipeline; features, validation design, classification and the operating point; scoring service |
+| Eric Elikplim Sunu | `ElikplimSunu` | Regression for the loan limit; noise floor; derivations; reason codes |
+| Clifford Yeboah | `YCliffe21` | Problem framing and cost matrix; exploratory analysis; Kenya to Ghana transfer |
+| Adzeyena Opei | `AdzeyenaOpei` | Ethics and regulation, Model Card, Datasheet and decline letter; report and slides |
 
-1. Fill in owners above and sign the AI-use declaration.
-2. Agree or change the cost-matrix assumptions (`src/costs.py`) and the regression target (repaid loans only).
-3. Everyone: rerun `make` and be able to explain each number.
-4. Write individual reflections.
+| Section | Lead | Notebook / output |
+|---|---|---|
+| Setup and reproducibility | Mubarak Tijani | repo, `requirements.txt`, `Makefile`, `scripts/`, `tests/` |
+| 1 Framing (Part A) | Clifford Yeboah | `01_problem_framing.ipynb`, `src/schema.py`, `src/costs.py` |
+| 2 EDA (B1) | Clifford Yeboah | `02_eda.ipynb`, `src/data.py` |
+| 3 Features (B2) | Mubarak Tijani | `03_features.ipynb`, `src/features.py`, `tests/test_features.py` |
+| 4 Validation (B3) | Mubarak Tijani | `04_validation.ipynb`, `src/validation.py` |
+| 5 Classification (B4–B5) | Mubarak Tijani | `05_classification.ipynb`, `src/models.py`, `13_rubric_additions.ipynb` |
+| 6 Regression (B4–B5) | Eric Elikplim Sunu | `06_regression.ipynb` |
+| 7 Noise floor (B6) | Eric Elikplim Sunu | `07_noise_floor.ipynb`, `src/bootstrap.py` |
+| 8 Derivations (LO3) | Eric Elikplim Sunu | `08_derivations.ipynb` |
+| 9 Reason codes (B7) | Eric Elikplim Sunu | `09_reason_codes.ipynb`, `src/reasons.py` |
+| 10 Ghana transfer (Part C) | Clifford Yeboah | `10_ghana_transfer.ipynb` |
+| 11 Ethics and regulation (Part D) | Adzeyena Opei | `11_ethics_regulation.ipynb`, `docs/model_card.md`, `docs/datasheet.md`, `docs/decline_letter.md` |
+| 12 Scoring service (Part E) | Mubarak Tijani | `12_scoring_service.ipynb`, `src/scoring.py`, `scripts/score.py`, `models/` |
+| Report and slides | Adzeyena Opei | `reports/`, `slides/` |
+| Number check | Mubarak Tijani | `scripts/verify_claims.py`, `reports/claims_table.md` |
 
-Closed: Act 726 was read from the Parliament of Ghana's copy (`docs/legal/Act726_CreditReportingAct2007.pdf`). The bureau-search duty is section 26(4); the full mapping is in `11_ethics_regulation.ipynb` §11.4. Amendments after 2012 and the Borrowers and Lenders Act 2020 are still not reviewed.
+Each member submits an individual reflection separately.
+
+## AI-use declaration
+
+Declared under the course AI policy (brief, Appendix B3). We used an AI assistant (Claude Code) to scaffold the repository, to draft and debug the notebook, module and script code, to draft report and slide text, and to rerun the notebooks and recheck the quoted numbers.
+
+- Every number in the report comes from a notebook. Fifty of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
+- AI-drafted statements that did not match the outputs were corrected, for example the direction of the "loan size" reason code and the share of co-funded Ghana loans.
+- The regulatory mapping was written from the legal texts in `docs/legal/`.
+- Each member's individual reflection gives their own declaration.

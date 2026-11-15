@@ -56,7 +56,3 @@ Numbers that are not in this table (for example the bootstrap intervals, the reg
 | C48 | Ghana adults who borrowed any money | 52% | `11_ethics_regulation` §11.5 |
 | C49 | Account ownership, women | 63% | `11_ethics_regulation` §11.5 |
 | C50 | Account ownership, men | 74% | `11_ethics_regulation` §11.5 |
-
-## Corrections found by this check
-
-- **C24.** The report and slides said 66% of Ghana loans are co-funded. That figure counted loans with exactly two lenders; 36 Ghana loans have three. Counting every loan with more than one lender gives 67%, and the notebook, report and slides now say so. No conclusion changes.

@@ -134,3 +134,12 @@ The cost matrix uses our own figures. The default rule and the timing of `Lender
 # 13. Reproducibility
 
 Everything in this report is produced by the code in the repository, with `random_state = 42` throughout and package versions pinned in `requirements.txt`. With the data files in `data/raw/` (sources in `data/README.md`), `make` reruns the thirteen notebooks in order, the tests, the claim check, this report and the slides in about 15 minutes on a laptop. `scripts/verify_claims.py` recomputes 50 of the numbers quoted here from the raw files, independently of the notebooks, and `reports/claims_table.md` lists where each one comes from. The saved model ships in `models/nkwapay-v1.joblib`, and `python scripts/score.py examples/application_repeat.json` scores an application without any training data. The raw data is not in the repository because the Zindi and Findex terms do not allow redistribution.
+
+# 14. AI-use declaration
+
+Declared under the course AI policy (brief, Appendix B3). We used an AI assistant (Claude Code) to scaffold the repository, to draft and debug the notebook, module and script code, to draft report and slide text, and to rerun the notebooks and recheck the quoted numbers.
+
+- Every number in the report comes from a notebook. Fifty of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
+- AI-drafted statements that did not match the outputs were corrected, for example the direction of the "loan size" reason code and the share of co-funded Ghana loans.
+- The regulatory mapping was written from the legal texts in `docs/legal/`.
+- Each member's individual reflection gives their own declaration.
