@@ -118,7 +118,7 @@ slide("Telling a borrower why",
       image="09_family_importance.png", img_w=6.4)
 
 slide("Ghana: out of the model's reach",
-      ["87% of loans on unseen products, 96% on unseen lenders, 66% co-funded",
+      ["87% of loans on unseen products, 96% on unseen lenders, 67% co-funded",
        "Domain classifier: AUC 1.000 (0.999 without product, lender, co-funding)",
        "Importance weighting: effective sample 2.3% of Kenya; scores change, no way to check",
        "Model would decline 22% (Kenya 6.7%): almost all Type_2/Type_8, 8.5% of Type_3"],
@@ -145,7 +145,7 @@ slide("What we recommend",
       ["Kenya: deploy logistic regression at the cost threshold, recalibrate monthly, monitor drift",
        "Thin-file applicants: starter loans and human review, never automatic decline",
        "Ghana: capped, monitored pilot with human review; collect outcomes, then recalibrate and validate",
-       "Before launch: credit-bureau integration (BoG §7.3, Act 726), consent capture, legal review of Act 726 and Act 1052",
+       "Before launch: bureau search before each decision (Act 726 s.26(4)), bureau reporting (BoG §7.3), consent capture, legal review",
        "Replace our cost assumptions with NkwaPay's own"],
       takeaway="The next gain comes from Ghanaian data, not a cleverer Kenyan model.")
 
