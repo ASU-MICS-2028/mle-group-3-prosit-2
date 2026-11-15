@@ -103,11 +103,22 @@ slide("Model choice and the money",
       image="05_threshold_value.png", img_w=7.0,
       takeaway="The model earns its keep exactly where it is least accurate.")
 
+slide("The threshold follows the price",
+      ["Our 6.2% assumes an 8% fee on a GHS 500 Ghana launch loan",
+       "Repaid 7-day Kenyan loans (96% of the data) carried an average fee of 1.4%: about 70 KES earned against 3,700 KES lost on a default",
+       "At that price the break-even threshold for a 7-day loan is 1.9%; for 8-to-30-day loans (fee 5.6%) it is 7.3%",
+       "Thresholds set by term from observed fees: approve 87% instead of 97%, catch 60% of defaults instead of 29%",
+       "We keep 6.2% for the Ghana product and report this as a sensitivity"],
+      image="01_threshold_sensitivity.png", img_w=6.6,
+      takeaway="NkwaPay must supply its real Ghana fee before the threshold is fixed.")
+
 slide("How much to lend",
       ["Ridge on log amount, trained on repaid loans only; median error ≈ 1,930 KES (GHS 150)",
        "Raw-scale terms extrapolated a 3-year loan to e^57 KES; log scale and a cap fixed it",
        "'Lend what they borrowed before' is within 25% more often than any model (38%)",
-       "First-time borrowers over-predicted by ~40% → first-loan cap"],
+       "First-time borrowers over-predicted by ~40% → first-loan cap",
+       "Does the limit work? Share of money lent that went to defaulters: 18% with no limit, 4.6% with ours",
+       "The price: 43% of good borrowers are offered their full request, 64% at least three quarters"],
       image="06_residuals.png", img_w=7.0)
 
 slide("Telling a borrower why",
@@ -130,7 +141,9 @@ slide("Fairness and the law",
        "Thin-file applicants: declined 32%, including 30% of those who would repay",
        "Dropping history features changes nothing (0.145 → 0.144): the proxy leaks back",
        "Findex Ghana: account gaps by gender, income, education, area; mobile-money borrowing reaches these groups",
-       "Act 843 s.41: notice + 21-day human review; BoG: 20-day complaints, bureau reporting (not met)"],
+       "Starter loan at 10% size costs about GHS 12 per affected applicant, ~1% of portfolio value; 58% of the good ones borrow again",
+       "Act 843 s.41: notice + 21-day human review; BoG: 20-day complaints, bureau reporting (not met)",
+       "Also not met: BoG single-customer limit (§3.5(5)), Data Protection Impact Assessment (§2.1)"],
       image="11_findex_gaps.png", img_w=6.6,
       takeaway="Mitigation is a policy: refer thin-file applicants to a capped starter loan, monitor parity.")
 
@@ -138,6 +151,7 @@ slide("Scoring service",
       ["Scorer.score(application, history) → P(default), decision, 3 reasons, offered amount",
        "Same feature code as training; tested to reproduce training features exactly",
        "approve · decline · refer (thin-file, or any market other than Kenya)",
+       "One rule on top of the model: an earlier unpaid loan is never approved automatically (the model alone approved 29 of 81 such applicants)",
        "~20 ms per call (p95 32 ms); 115,000 loans/s in batch",
        "Nine application fields + earlier loans; no personal or sensitive data"])
 
@@ -146,7 +160,7 @@ slide("What we recommend",
        "Thin-file applicants: starter loans and human review, never automatic decline",
        "Ghana: capped, monitored pilot with human review; collect outcomes, then recalibrate and validate",
        "Before launch: bureau search before each decision (Act 726 s.26(4)), bureau reporting (BoG §7.3), consent capture, legal review",
-       "Replace our cost assumptions with NkwaPay's own"],
+       "Replace our cost assumptions with NkwaPay's own: at Kenyan 7-day fees the threshold would be 1.9%, not 6.2%"],
       takeaway="The next gain comes from Ghanaian data, not a cleverer Kenyan model.")
 
 out = ROOT / "slides" / "NkwaPay_Debrief_Group3.pptx"
