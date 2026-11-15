@@ -4,7 +4,7 @@ Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and asse
 
 > **Want to try the scorer?** `python scripts/score.py examples/application_repeat.json` works straight after `pip install -r requirements.txt`; the saved model is in `models/` and needs no data. To rerun the whole analysis, follow [Running it on your own machine](#running-it-on-your-own-machine).
 
-**Deliverables:** report `reports/NkwaPay_Report_Group3.pdf` (also `.docx`; source `reports/report.md`) · slides `slides/NkwaPay_Debrief_Group3.pptx` (plain-language version `slides/NkwaPay_Debrief_Simple.pptx`) · Model Card `docs/model_card.md` · Datasheet `docs/datasheet.md` · decline letter `docs/decline_letter.md` · AI-use declaration `docs/ai_use_declaration.md`.
+**Deliverables:** report `reports/NkwaPay_Report_Group3.pdf` (also `.docx`; source `reports/report.md`) · ethical and regulatory audit `reports/NkwaPay_Audit_Group3.pdf` · slides `slides/NkwaPay_Debrief_Group3.pptx` (plain-language version `slides/NkwaPay_Debrief_Simple.pptx`) · Model Card `docs/model_card.md` · Datasheet `docs/datasheet.md` · decline letter `docs/decline_letter.md` · AI-use declaration `docs/ai_use_declaration.md`.
 
 ## Headline results
 
@@ -14,12 +14,13 @@ Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and asse
 | Leakage | `Total_Amount_to_Repay` is updated after default (AUC 0.98); dropped. Naive pipeline PR-AUC 0.825 vs honest 0.145 |
 | Validation | Temporal expanding window. Random CV overstates 1.7–2.7× and picks the wrong model |
 | Regime change | Type_1 (93% of loans) ends 1 Dec 2022; afterwards defaults 9–13%, ROC ~0.6 |
-| Classifier | Logistic regression, decline if P(default) > 0.062 (cedi cost matrix). PR-AUC 0.145, ROC 0.725 (temporal) |
-| Loan size | Ridge on log amount (repaid loans), median error ~1,930 KES; first-loan cap needed |
+| Classifier | Logistic regression, chosen from 14 candidates; decline if P(default) > 0.062 (cedi cost matrix). PR-AUC 0.145, ROC 0.725 (temporal) |
+| Pricing check | At the fees in the Kenyan data (1.4% on a 7-day loan) the break-even threshold for 7-day loans is 1.9%, so the threshold must be set per product |
+| Loan size | Ridge on log amount (repaid loans), median error ~1,930 KES; the limit cuts money reaching eventual defaulters by 87% |
 | Ghana | 87% unseen products, 96% unseen lenders, domain AUC 1.0. No automated Ghana decisions before a pilot |
 | Service | `Scorer.score()` → P(default), approve/decline/refer, 3 reasons, offer; ~20 ms per call. Saved model shipped in `models/nkwapay-v1.joblib` |
 | Fairness cost | A 10% starter loan for applicants with no repayment record costs about 1% of portfolio value and stops 539 good borrowers being turned away |
-| Checked | `make verify` recomputes 56 quoted numbers from the raw files; all 56 reproduce (`reports/claims_table.md`) |
+| Checked | `make verify` recomputes 62 quoted numbers from the raw files; all 62 reproduce (`reports/claims_table.md`) |
 
 ## Where each part of the brief is answered
 
@@ -52,7 +53,8 @@ examples/         five made-up applications for the scorer: approve, decline, ea
 models/           the saved scoring service, nkwapay-v1.joblib (20 KB; rebuilt by notebook 12)
 notebooks/        one notebook per section, 01 to 13
 reports/          report, claims table, figures and result tables
-scripts/          run_all.sh (everything), verify_claims.py (recheck numbers), score.py (score one application)
+scripts/          run_all.sh (everything), verify_claims.py (recheck numbers), score.py (score one application),
+                  build_audit.py (assemble the audit), make_submission.py (Zindi submission file)
 slides/           debrief deck and its build script
 src/              shared code: data, features, models, validation, costs, bootstrap, reasons, scoring
 tests/            33 pytest checks (data, leakage replay, loan merge, reasons, scoring service, shipped model)
@@ -109,8 +111,8 @@ This takes about 15 minutes. It checks the data, runs notebooks 01 to 13 in orde
 |---|---|
 | `make check` | confirms the raw files are present with the expected shapes |
 | `make test` | runs the 33 tests |
-| `make verify` | recomputes 56 quoted numbers from the raw files (about 10 seconds) |
-| `make report` | rebuilds the report from `reports/report.md` |
+| `make verify` | recomputes 62 quoted numbers from the raw files (about 15 seconds) |
+| `make report` | rebuilds the report and the audit document |
 | `make slides` | rebuilds the debrief deck |
 | `make score` | scores the example applications |
 
@@ -186,7 +188,7 @@ Each member submits an individual reflection separately.
 
 Declared under the course AI policy (brief, Appendix B3). We used an AI assistant (Claude Code) to scaffold the repository, to draft and debug the notebook, module and script code, to draft report and slide text, and to rerun the notebooks and recheck the quoted numbers.
 
-- Every number in the report comes from a notebook. Fifty-six of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
+- Every number in the report comes from a notebook. Sixty-two of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
 - AI-drafted statements that did not match the outputs were corrected, for example the direction of the "loan size" reason code and the share of co-funded Ghana loans.
 - The regulatory mapping was written from the legal texts in `docs/legal/`.
 - Each member's individual reflection gives their own declaration.

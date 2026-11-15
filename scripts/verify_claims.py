@@ -146,6 +146,33 @@ def model_checks():
     past = (tr.n_prev_defaults >= 1).to_numpy()[tested]
     check("C56", "Such applicants approved by the model alone, out of time", 29, int((past & ~declined).sum()), 0)
 
+    # Fees actually paid on repaid loans, and the threshold they imply for a 7-day loan (Section 13.7).
+    raw = pd.read_csv(config.TRAIN_CSV).drop_duplicates("tbl_loan_id").set_index("tbl_loan_id")
+    fee = tr.tbl_loan_id.map(raw.Total_Amount_to_Repay) / tr.Total_Amount - 1
+    week = (tr.duration <= 7) & (tr.target == 0)
+    check("C57", "Mean fee on repaid loans of 7 days or less (%)", 1.4, 100 * fee[week].mean(), 0.05)
+    e = LoanEconomics()
+    fp_cost = fee[week].mean() * tr.Total_Amount[week].median()
+    fn_cost = tr.Total_Amount[week].median() * (1 - e.recovery_rate) + e.collection_cost * 12.7
+    check("C58", "Break-even threshold for a 7-day loan at observed fees (%)", 1.9, 100 * fp_cost / (fp_cost + fn_cost), 0.05)
+
+    # The loan limit, out of time (Section 13.8).
+    reg_cols = M.inputs(M.REG_FEATURES)
+    offer, asked, outcome = [], [], []
+    for a, b in V.temporal(tr):
+        rep = tr.iloc[a][tr.iloc[a].target == 0]
+        lim = np.expm1(M.ridge().fit(rep[reg_cols], np.log1p(rep.Total_Amount)).predict(tr.iloc[b][reg_cols]))
+        t = tr.iloc[b]
+        o = np.minimum(t.Total_Amount.to_numpy(), lim)
+        o = np.where(t.n_prev_resolved.to_numpy() == 0, np.minimum(o, rep[rep.n_prev_loans == 0].Total_Amount.median()), o)
+        offer.append(o); asked.append(t.Total_Amount.to_numpy()); outcome.append(t.target.to_numpy())
+    offer, asked, outcome = map(np.concatenate, (offer, asked, outcome))
+    bad = outcome == 1
+    check("C59", "Share of money lent that went to defaulters, no limit (%)", 18, 100 * asked[bad].sum() / asked.sum(), 0.5)
+    check("C60", "Same share with the ridge limit (%)", 4.6, 100 * offer[bad].sum() / offer.sum(), 0.05)
+    check("C61", "Cut in money reaching eventual defaulters (%)", 87, 100 * (1 - offer[bad].sum() / asked[bad].sum()), 0.5)
+    check("C62", "Good borrowers offered their full request (%)", 43, 100 * (offer[~bad] >= asked[~bad] * 0.999).mean(), 0.5)
+
     saved = config.MODELS / "nkwapay-v1.joblib"
     if saved.exists():
         from src.scoring import Scorer

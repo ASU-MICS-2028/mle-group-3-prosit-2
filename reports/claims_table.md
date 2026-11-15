@@ -1,6 +1,6 @@
 # Claims table
 
-Every number below is quoted in the report, the README or the slides. The "Source" column says which notebook produces it, and the ID is the check in `scripts/verify_claims.py` that recomputes it from the raw files. Run `make verify` to recheck all of them; the last run reproduced 56 of 56.
+Every number below is quoted in the report, the README or the slides. The "Source" column says which notebook produces it, and the ID is the check in `scripts/verify_claims.py` that recomputes it from the raw files. Run `make verify` to recheck all of them; the last run reproduced 62 of 62.
 
 Numbers that are not in this table (for example the bootstrap intervals, the regression errors and the domain-classifier AUC) come straight from the notebook named beside them in the report and are saved in `reports/*.csv`. They are not independently recomputed.
 
@@ -62,3 +62,9 @@ Numbers that are not in this table (for example the bootstrap intervals, the reg
 | C54 | Train loans made after an earlier default was on record | 89 | `13_rubric_additions` §13.6 |
 | C55 | Default rate of those loans | 18% | `13_rubric_additions` §13.6 |
 | C56 | Such applicants approved by the model alone, out of time | 29 | `13_rubric_additions` §13.6 |
+| C57 | Mean fee paid on repaid loans of 7 days or less | 1.4% | `13_rubric_additions` §13.7 |
+| C58 | Break-even threshold for a 7-day loan at observed fees | 1.9% | `13_rubric_additions` §13.7 |
+| C59 | Share of money lent that went to defaulters, no limit | 18% | `13_rubric_additions` §13.8 |
+| C60 | Same share with the ridge limit and first-loan cap | 4.6% | `13_rubric_additions` §13.8 |
+| C61 | Cut in money reaching eventual defaulters | 87% | `13_rubric_additions` §13.8 |
+| C62 | Good borrowers offered their full request | 43% | `13_rubric_additions` §13.8 |
