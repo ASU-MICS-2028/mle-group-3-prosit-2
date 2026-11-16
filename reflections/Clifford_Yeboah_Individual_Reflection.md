@@ -7,7 +7,7 @@ monofont: "DejaVu Sans Mono"
 pagestyle: empty
 ---
 
-**Clifford Yeboah** · GitHub: `YCliffe21` · Role: problem framing and cost matrix (Part A), exploratory analysis (Part B1), Kenya-to-Ghana transfer (Part C)
+**Clifford Yeboah** · Role: problem framing and cost matrix (Part A), exploratory analysis (Part B1), Kenya-to-Ghana transfer (Part C)
 
 # My contribution
 
