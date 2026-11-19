@@ -4,7 +4,7 @@ Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and asse
 
 > **Want to try the scorer?** `python scripts/score.py examples/application_repeat.json` works straight after `pip install -r requirements.txt`; the saved model is in `models/` and needs no data. To rerun the whole analysis, follow [Running it on your own machine](#running-it-on-your-own-machine).
 
-**Deliverables:** report `reports/NkwaPay_Report_Group3.pdf` (also `.docx`; source `reports/report.md`) · ethical and regulatory audit `reports/NkwaPay_Audit_Group3.pdf` · debrief deck `slides/NkwaPay_Debrief_Present.pptx` (18 slides presented on 20 November, scripts in the speaker notes; full reading version `slides/NkwaPay_Debrief_Simple.pptx`; technical version `slides/NkwaPay_Debrief_Group3.pptx`, built by `make slides`) · Model Card `docs/model_card.md` · Datasheet `docs/datasheet.md` · decline letter `docs/decline_letter.md` · AI-use declaration `docs/ai_use_declaration.md`.
+**Deliverables:** report `reports/NkwaPay_Report_Group3.pdf` (also `.docx`; source `reports/report.md`) · ethical and regulatory audit `reports/NkwaPay_Audit_Group3.pdf` · debrief deck `slides/NkwaPay_Debrief_Present.pptx` (18 slides presented on 20 November, scripts in the speaker notes; full reading version with the backup slides for questions `slides/NkwaPay_Debrief_Simple.pptx`; technical version `slides/NkwaPay_Debrief_Group3.pptx`, built by `make slides`) · Model Card `docs/model_card.md` · Datasheet `docs/datasheet.md` · decline letter `docs/decline_letter.md` · AI-use declaration `docs/ai_use_declaration.md`.
 
 ## Headline results
 
