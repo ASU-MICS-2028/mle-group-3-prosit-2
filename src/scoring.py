@@ -121,7 +121,7 @@ class Scorer:
             loans[c] = loans[c].fillna(default) if c in loans else default
         loans = loans.astype({"Total_Amount": float, "duration": int, "target": float, "n_lenders": int,
                               "Lender_portion_Funded": float})
-        return F.build_features(loans, prior=self.prior).iloc[[-1]]
+        return F.build_features(loans, prior=self.prior, macro=False).iloc[[-1]]
 
     def score(self, application: dict, history=None) -> dict:
         t0 = time.perf_counter()

@@ -108,10 +108,13 @@ def model_checks():
     cache = config.DATA_PROCESSED / "features.pkl"
     if cache.exists():
         feat = pd.read_pickle(cache)
-        tr = feat[feat.split == "train"].reset_index(drop=True)
-    else:  # build the features from the raw files, as notebook 03 does
-        raw_tr, raw_te = load_loans("train"), load_loans("test")
-        tr = F.build_features(pd.concat([raw_tr, raw_te], ignore_index=True)).iloc[: len(raw_tr)].reset_index(drop=True)
+    else:  # build the same table notebook 03 saves: ids, dates, split and target, then the features
+        loans = pd.concat([load_loans("train").assign(split="train"), load_loans("test").assign(split="test")],
+                          ignore_index=True)
+        keep = ["tbl_loan_id", "customer_id", "country_id", "disbursement_date", "due_date", "split", "target",
+                "Total_Amount"]
+        feat = pd.concat([loans[keep], F.build_features(loans)], axis=1)
+    tr = feat[feat.split == "train"].reset_index(drop=True)
     cols = M.inputs(M.DEPLOY_FEATURES)
     oof, fold, folds = V.cross_validate(M.logreg(numeric=M.DEPLOY_FEATURES, class_weight=None), tr, cols, V.temporal(tr))
     check("C30", "PR-AUC, deployed model, temporal folds", 0.145, folds.pr_auc.mean(), 0.0005)
@@ -145,6 +148,25 @@ def model_checks():
     check("C55", "Default rate of those loans (%)", 18, 100 * tr.target[had].mean(), 0.5)
     past = (tr.n_prev_defaults >= 1).to_numpy()[tested]
     check("C56", "Such applicants approved by the model alone, out of time", 29, int((past & ~declined).sum()), 0)
+
+    # Recalibration out of time (Section 13.9): same scores, same function as the notebook.
+    from sklearn.metrics import brier_score_loss
+    from src.costs import expected_value
+    p_t, f_t, due_t = oof[tested], fold[tested], tr.due_date.to_numpy()[tested]
+    platt, fits = V.recalibrate(p_t, y, f_t, due_t)
+    iso, _ = V.recalibrate(p_t, y, f_t, due_t, method="isotonic")
+    platt_all, _ = V.recalibrate(p_t, y, f_t, due_t, window="all")
+    ghs = lambda p: expected_value(y[late], p[late], LoanEconomics().threshold) / late.sum() * 1000  # noqa: E731
+    check("C63", "Brier from Dec 2022, raw scores", 0.1005, brier_score_loss(y[late], p_t[late]), 0.00005)
+    check("C64", "Brier from Dec 2022, Platt on the latest fold", 0.0917, brier_score_loss(y[late], platt[late]), 0.00005)
+    check("C65", "Platt slope fitted on 2023 outcomes (fold 4)", 0.30, fits.set_index("fold").slope[4], 0.005)
+    check("C66", "Fold 3 mean P(default) after Platt on the latest fold (%)", 5.6, 100 * platt[f_t == 3].mean(), 0.05)
+    check("C67", "Fold 4 mean P(default) after Platt on the latest fold (%)", 9.6, 100 * platt[f_t == 4].mean(), 0.05)
+    check("C68", "Value change from Dec 2022, isotonic on the latest fold (GHS per 1,000)", 1_891, ghs(iso) - ghs(p_t), 0.5)
+    check("C69", "Value change from Dec 2022, Platt on all history (GHS per 1,000)", -1_625, ghs(platt_all) - ghs(p_t), 0.5)
+    in_fold = lambda p, k: expected_value(y[f_t == k], p[f_t == k], LoanEconomics().threshold) / (f_t == k).sum() * 1000  # noqa: E731
+    check("C70", "Fold 3 value change, Platt on the latest fold (GHS per 1,000)", -9_521, in_fold(platt, 3) - in_fold(p_t, 3), 0.5)
+    check("C71", "Fold 4 value change, Platt on the latest fold (GHS per 1,000)", 6_864, in_fold(platt, 4) - in_fold(p_t, 4), 0.5)
 
     # Fees actually paid on repaid loans, and the threshold they imply for a 7-day loan (Section 13.7).
     raw = pd.read_csv(config.TRAIN_CSV).drop_duplicates("tbl_loan_id").set_index("tbl_loan_id")

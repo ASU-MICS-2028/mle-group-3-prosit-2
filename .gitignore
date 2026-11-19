@@ -18,3 +18,8 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# Working notes and drafts, kept out of shared history
+WORKLOG.md
+WORKLOG-archive.md
+handoff/
