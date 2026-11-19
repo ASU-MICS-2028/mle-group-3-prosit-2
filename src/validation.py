@@ -55,6 +55,37 @@ def summarise(folds: pd.DataFrame) -> dict:
             "roc_auc_sd": folds.roc_auc.std(), "pr_lift": folds.pr_lift.mean(), "base_rate": folds.base_rate.mean()}
 
 
+def recalibrate(p, y, fold, due, method="platt", window="previous", cuts=TEMPORAL_CUTS):
+    """Out-of-time recalibration of temporal out-of-fold scores (Section 13.9).
+
+    Fold k (k >= 1) gets a calibrator fitted on earlier folds' scores whose outcome was known before fold k
+    began (due date + label lag < cut-off k): only fold k-1 (window="previous") or every earlier fold
+    (window="all"). Fold 0 has nothing earlier and stays NaN. method="platt" fits an unpenalised logistic
+    regression on the log-odds (slope and intercept); "isotonic" fits a monotone step function.
+    Returns (recalibrated p, per-fold fit table)."""
+    from sklearn.isotonic import IsotonicRegression
+    from sklearn.linear_model import LogisticRegression
+
+    p, y, fold = np.asarray(p, float), np.asarray(y, int), np.asarray(fold)
+    known = (pd.to_datetime(pd.Series(due)) + pd.to_timedelta(LABEL_LAG_DAYS, unit="D")).to_numpy()
+    logit = lambda q: np.log(np.clip(q, 1e-6, 1 - 1e-6) / (1 - np.clip(q, 1e-6, 1 - 1e-6)))
+    out, rows = np.full(len(p), np.nan), []
+    for k in range(1, fold.max() + 1):
+        cut = pd.Timestamp(cuts[k]).to_datetime64()
+        fit = ((fold == k - 1) if window == "previous" else (fold < k) & (fold >= 0)) & (known < cut)
+        test = fold == k
+        if method == "platt":
+            cal = LogisticRegression(penalty=None).fit(logit(p[fit])[:, None], y[fit])
+            out[test] = cal.predict_proba(logit(p[test])[:, None])[:, 1]
+            extra = {"slope": cal.coef_[0, 0], "intercept": cal.intercept_[0]}
+        else:
+            cal = IsotonicRegression(y_min=0, y_max=1, out_of_bounds="clip").fit(p[fit], y[fit])
+            out[test], extra = cal.predict(p[test]), {}
+        rows.append(dict(fold=k, n_fit=int(fit.sum()), defaults_fit=int(y[fit].sum()),
+                         latest_outcome_used=pd.Timestamp(known[fit].max()).date(), **extra))
+    return out, pd.DataFrame(rows)
+
+
 def cross_validate_reg(model, df, cols, splits, target="log_amount_target"):
     """Out-of-fold regression predictions on the log scale plus per-fold errors
     on the log and currency scales."""

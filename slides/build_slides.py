@@ -59,7 +59,7 @@ def slide(title, bullets=None, image=None, takeaway=None, img_w=7.4):
 s = prs.slides.add_slide(BLANK)
 text(s, "NkwaPay credit scoring", 0.8, 2.3, 11.5, 1.2, size=44, bold=True)
 text(s, "A Kenyan model, a Ghanaian launch, and what stands between them", 0.8, 3.4, 11.5, 0.8, size=24, color=MUTED)
-text(s, "ICS553 Prosit 2 · Group 3 · 3 November 2026", 0.8, 4.5, 11.5, 0.6, size=18, color=MUTED)
+text(s, "ICS553 Prosit 2 · Group 3 · 20 November 2026", 0.8, 4.5, 11.5, 0.6, size=18, color=MUTED)
 
 slide("The question",
       ["NkwaPay wants to score Ghanaian loan applications",
@@ -156,7 +156,7 @@ slide("Scoring service",
        "Nine application fields + earlier loans; no personal or sensitive data"])
 
 slide("What we recommend",
-      ["Kenya: deploy logistic regression at the cost threshold, recalibrate monthly, monitor drift",
+      ["Kenya: deploy logistic regression at the cost threshold; recalibrate only on recent outcomes; after a shift, human review before any refit",
        "Thin-file applicants: starter loans and human review, never automatic decline",
        "Ghana: capped, monitored pilot with human review; collect outcomes, then recalibrate and validate",
        "Before launch: bureau search before each decision (Act 726 s.26(4)), bureau reporting (BoG §7.3), consent capture, legal review",

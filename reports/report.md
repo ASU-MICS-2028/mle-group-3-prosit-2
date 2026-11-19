@@ -7,6 +7,9 @@ author:
   - Clifford Yeboah
   - Adzeyena Opei
 date: "3 November 2026"
+header-includes:
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
 ---
 
 # 1. Summary
@@ -25,13 +28,13 @@ All results are reproducible from the repository (Section 13).
 
 # 2. Problem framing (Part A)
 
-**Decision point.** The model runs at approval: the applicant has chosen product, amount and term, and nothing has been disbursed (Figure 1). Any value set after that moment cannot be a feature.
+**Decision point.** The model runs at approval: the applicant has chosen product, amount and term, and nothing has been disbursed (Figure 1). Any value set after that moment cannot be a feature. The data has no application or approval timestamp, so the closest column is `disbursement_date`. We assume an instant mobile-money loan is approved and paid out on the same day; the data cannot confirm it.
 
 ![Loan timeline and decision point](figures/01_loan_timeline.png){width=95%}
 
-**Label.** `target = 1` means the loan defaulted. The data does not state the default rule (days past due or grace period); we treat outcomes as known at the due date and flag this for NkwaPay.
+**Label.** `target = 1` means the loan defaulted. It is measured over the loan's own term, from `disbursement_date` to `due_date` (disbursement plus `duration`). The data does not state the default rule (days past due or grace period); we treat outcomes as known on the due date (a lag of 0 days, `LABEL_LAG_DAYS` in `src/features.py`) and flag this for NkwaPay.
 
-**Feature audit.** Every column was classified as usable, identifier, redundant or leaky (`reports/01_feature_audit.csv`). Two decisions needed evidence. `due_date` equals `disbursement_date + duration` on every row, and `Amount_Funded_By_Lender` equals share times amount, so both are redundant. `Total_Amount_to_Repay` looks like a contract term but is not: on the same product, term and lender, repaid loans owe about 0.7% over principal and defaulted loans about 41% (Figure 2). We dropped it and the column derived from it.
+**Feature audit** (`reports/01_feature_audit.csv`). Every column was classified as usable, identifier, redundant or leaky, with whether it is available at the decision and which task it is the target of. Three columns are not available at the decision: `Total_Amount_to_Repay`, `Lender_portion_to_be_repaid` and `target`. For `Lender_portion_Funded`, and `Amount_Funded_By_Lender` built from it, availability is assumed until NkwaPay confirms the funding split is fixed before approval. The Task 2 target is `target`; the Task 1 target is `Total_Amount` (as `log1p`, on repaid loans). Two decisions needed evidence. `due_date` equals `disbursement_date + duration` on every row, and `Amount_Funded_By_Lender` equals share times amount, so both are redundant. `Total_Amount_to_Repay` looks like a contract term but is not: on the same product, term and lender, repaid loans owe about 0.7% over principal and defaulted loans about 41% (Figure 2). We dropped it and the column derived from it.
 
 ![Repay ratio on identical contracts: defaulters owe far more](figures/01_repay_ratio_leakage.png){width=75%}
 
@@ -57,7 +60,7 @@ All features live in `src/features.py` and are shared by training and the scorin
 - **Borrower history (14 features):** counts of earlier loans, resolved loans and defaults, smoothed past default rate, active loans and amounts, time since the last loan and the last default, past amounts and terms, distinct lenders.
 - **Calendar and macro** features were built and later removed (below).
 
-The timing rules are strict. History counts only loans disbursed on an earlier date, and a past outcome counts only once its due date has passed. Macro indicators for year Y join loans from Y + 1. A replay test rebuilds the data as it stood on five decision dates and checks that every feature is unchanged; a second test flips all future labels. We injected two leaks by hand to confirm the tests catch them, one of which was a real bug in our first draft (a smoothing prior computed over all labels).
+The timing rules are strict. History counts only loans disbursed on an earlier date, and a past outcome counts only once its due date has passed. Macro indicators for year Y join loans from Y + 1. The brief suggests a backward `merge_asof` without exact matches; we need sums over all earlier loans and a second time key (the due date) for outcomes, so we merge each customer's loans with themselves and keep strictly earlier pairs. A test on made-up loans confirms this equals a backward `merge_asof(allow_exact_matches=False)` on cumulative sums, and fails if same-day matches are let in. A replay test rebuilds the data as it stood on five decision dates and checks that every feature is unchanged; a second test flips all future labels. We injected two leaks by hand to confirm the tests catch them, one of which was a real bug in our first draft (a smoothing prior computed over all labels).
 
 Two findings shaped the model. Only 89 loans have an observable earlier default, because 95% of defaulters never borrow again; the useful history signal is how much and how often someone borrows (6.3% default with no earlier loan, 0.2% after 25 or more). The macro block takes only four distinct values within Kenya, so it can only act as a year label, and Ghana's inflation (up to 31%) lies far outside Kenya's range. It added nothing out of time (at most 0.003 PR-AUC) and was dropped.
 
@@ -72,7 +75,7 @@ We scored logistic regression and LightGBM under three schemes (Table 1). The te
 | Temporal (5 folds) | **0.129** | 0.726 | 0.106 | 0.726 |
 | *Naive: row level, leaky columns, random* | | | *0.825* | *0.986* |
 
-: Table 1. The same models under different validation schemes.
+: The same models under different validation schemes.
 
 ![Scheme comparison](figures/04_scheme_comparison.png){width=90%}
 
@@ -80,13 +83,31 @@ Grouping by customer barely matters (3 to 6% in PR-AUC) because the history feat
 
 # 6. Models (Parts B4 to B6)
 
-**Classification.** We compared 14 candidates on the temporal folds: a baseline that predicts the training default rate, four logistic regressions (unweighted, class-weighted, undersampled, stronger regularisation), a decision tree, a random forest (each with and without class weights), three LightGBM variants, k nearest neighbours and an RBF support vector machine. Unweighted logistic regression had the best PR-AUC (0.143) and the best lift after December 2022 (1.81). Shallow LightGBM had the best ROC (0.741). The default LightGBM and the forest fitted the 2022 boom closely and degraded most later. Class weighting did not improve ranking for any model family and destroyed calibration: weighted logistic regression predicts an average default probability of 0.29 against an actual 0.016, which would make a cost threshold meaningless.
+**Classification.** We compared 14 candidates on the temporal folds: a majority-class baseline (it gives everyone the training default rate, so it flags no one and its F1 is 0), four logistic regressions (unweighted, class-weighted, undersampled, stronger regularisation), a decision tree, a random forest (each with and without class weights), three LightGBM variants, k nearest neighbours and an RBF support vector machine. Unweighted logistic regression had the best PR-AUC (0.143) and the best lift after December 2022 (1.81). Shallow LightGBM had the best ROC (0.741). The default LightGBM and the forest fitted the 2022 boom closely and degraded most later. Class weighting did not improve ranking for any model family and destroyed calibration: weighted logistic regression predicts an average default probability of 0.29 against an actual 0.016, which would make a cost threshold meaningless.
 
 **Value in cedis.** Per 1,000 applications, approving everyone earns about GHS 21,000 in the 2022 regime and loses about GHS 16,600 after December 2022. Logistic regression at 0.062 adds little in 2022 (+300) but cuts the later loss to about 3,500. A credit model matters most exactly where it is least accurate.
 
 ![Expected value against threshold](figures/05_threshold_value.png){width=95%}
 
-**Calibration.** Probabilities are well calibrated in the 2022 regime. After December 2022 the average is right (10.8% predicted, 10.3% observed) but the spread is too wide: loans scored at 1 to 5% default at 5 to 10%, and loans scored above 50% default at about 22%. The fix is monthly recalibration (Platt scaling) on recent outcomes.
+**Calibration.** Probabilities are well calibrated in the 2022 regime (Figure 5). After December 2022 the average is right (10.8% predicted, 10.3% observed) but the spread is too wide: loans scored at 1 to 5% default at 5 to 10%, and loans scored above 50% default at about 22%. Class-weighted logistic regression is far off in every regime.
+
+![Reliability diagrams on the out-of-time folds](figures/05_calibration.png){width=95%}
+
+**Recalibration, out of time** (`13_rubric_additions.ipynb` §13.9, deployed model). We fitted Platt scaling (a slope and intercept on the log-odds) and isotonic regression to the temporal scores. Each fold's calibrator saw only outcomes known before that fold began, from the previous fold alone or from all history; a test checks that no later outcome is used. After December 2022 every variant lowers the Brier score, with bootstrap intervals below zero, and every Platt slope is below 1 (0.30 to 0.74): the spread is fixed. The level is not. Fold 3 (from December 2022) can learn only from boom-period outcomes, so Platt cuts its mean prediction to 5.6% while 12.9% default, approves more loans and loses GHS 9,521 per 1,000 against the raw scores; every variant loses money there. Fold 4, calibrated on 2023 outcomes, gets 9.6% against 8.8% and gains GHS 6,864 per 1,000 with Platt on the latest fold, while all history, swamped by the boom's 1% default rate, barely moves. Pooled over both folds (Table 2), only isotonic on the latest fold has an interval above zero.
+
+| From December 2022 (2,834 loans, 10.3% default) | Brier | Mean P | Approved | GHS per 1,000 against raw (95% interval) |
+|--------------------------------|----------|----------|------------|------------------------------------|
+| Raw scores | 0.1005 | 10.2% | 69% | (raw: -4,725) |
+| Platt, latest fold | 0.0917 | 8.1% | 31% | +949 (-2,497 to 4,297) |
+| Isotonic, latest fold | 0.0929 | 7.4% | 61% | +1,891 (71 to 3,907) |
+| Platt, all history | 0.0918 | 6.1% | 77% | -1,625 (-3,063 to -313) |
+| Isotonic, all history | 0.0930 | 5.7% | 80% | -3,386 (-5,464 to -1,573) |
+
+: Recalibration fitted only on outcomes known before each fold (`reports/13_recalibration.csv`).
+
+![Reliability before and after recalibration](figures/13_recalibration.png){width=85%}
+
+We recommend calibrating only on recent outcomes from the current regime, never the whole history. We tested fold-sized windows, not monthly refits; loans disbursed in a single month of 2023 held as few as 3 defaults, so a monthly refit needs a rolling window long enough to hold about as many defaults as fold 4's (119). We keep Platt as the default, since two parameters are harder to overfit, though this data cannot separate it from isotonic. Because a refit on pre-shift outcomes makes the first window worse, a divergence on the score-band monitor (notebook 12) should trigger human review, not an automatic refit. The shipped scorer still serves raw probabilities.
 
 **Operating point.** Logistic regression, decline when P(default) > 0.062. In 2022 this declines 1% of applicants and catches 15% of defaults; after December 2022 it declines 36% and catches 53%. Pooled F1 is 0.20.
 
@@ -94,15 +115,41 @@ Grouping by customer barely matters (3 to 6% in PR-AUC) because the history feat
 
 ![Confusion matrix at the cost threshold](figures/13_confusion_matrix.png){width=100%}
 
+**Threshold sweep** (deployed model, all temporal folds; `reports/13_threshold_sweep.csv`, built by `scripts/threshold_sweep.py` from the saved notebook 13 results).
+
+| Threshold | 0.02 | 0.04 | 0.062 | 0.08 | 0.10 | 0.15 | 0.25 |
+|---|---|---|---|---|---|---|---|
+| Precision | 0.083 | 0.129 | 0.142 | 0.156 | 0.162 | 0.180 | 0.222 |
+| Recall | 0.629 | 0.392 | 0.287 | 0.258 | 0.237 | 0.206 | 0.159 |
+| F1 | 0.147 | 0.194 | 0.190 | 0.194 | 0.192 | 0.192 | 0.185 |
+| Approval rate | 87.6% | 95.0% | 96.7% | 97.3% | 97.6% | 98.1% | 98.8% |
+| GHS per 1,000 | 19,421 | 19,707 | 19,430 | 19,386 | 19,323 | 19,252 | 19,112 |
+
+: Precision, recall and F1 when declining above each threshold.
+
+F1 hardly moves between 0.04 and 0.15 (0.19 throughout) while recall halves, so F1 cannot choose the threshold. The cost matrix does: it sets 0.062 before looking at these folds.
+
 **Regression.** We compared a mean baseline, a persistence rule, linear regression, ridge, lasso, support vector regression and LightGBM. Ridge regression (with terms on a log scale and predictions capped at the largest amount ever repaid) was jointly best with lasso on log RMSE (0.759 and 0.757) and on MAE in KES (about 5,900; median error about 1,930 KES or GHS 150), and slightly better than lasso after December 2022. Support vector regression was clearly worse (0.85). On a raw scale a linear model extrapolated three-year loans to e^57 KES, a useful lesson in why transforms matter. A simple rule, "lend what this borrower borrowed on average before", lands within 25% of the actual amount more often than any model (38%). First-time borrowers are over-predicted by about 40%, so a first-loan cap is needed.
+
+On both scales, out of time, ridge has RMSE 0.759 and MAE 0.550 on the log scale, and RMSE 39,416 KES and MAE 5,907 KES on the original scale; the mean baseline has 1.231, 0.955, 52,135 KES and 9,313 KES (`reports/06_regression_board.csv`). The original-scale RMSE is large because a few loans run to millions of shillings. The residuals (Figure 8) are centred above the bulk of predictions, so large loans are not systematically under-predicted. They have a long negative tail, because predictions rarely fall below about 400 KES while some actual loans are far smaller. Errors are largest for loans above 90 days (log RMSE 1.12) and for borrowers with no history (1.05).
+
+![Ridge residual diagnostics](figures/06_residuals.png){width=95%}
 
 **Does the limit do its job?** (`13_rubric_additions.ipynb` §13.8). With no limit, 18% of the money lent out of time went to borrowers who defaulted, because defaulters ask for much larger loans. Offering the smaller of the request and the ridge limit, with the first-loan cap, cuts the money reaching eventual defaulters by 87% and brings that share to 4.6% (7.2% for the past-average rule). The price is paid by good borrowers: 43% are offered their full request and 64% at least three quarters of it. The limit should be loosened for borrowers with a long clean record.
 
 **Noise floor.** A paired bootstrap that resamples customers (1,000 replicates) gives the following results. Logistic regression beats the baseline on every metric in every replicate. Against the brief's noise floor of ±0.0263, the gains over the baseline (F1 +0.20, PR-AUC +0.10) are far beyond it, while the overall differences from shallow LightGBM (about 0.01 to 0.02) are inside it. Against shallow LightGBM, PR-AUC and F1 are not distinguishable overall; LightGBM is significantly better on ROC (by 0.024) and earns slightly more at the threshold (about GHS 250 per 1,000). After December 2022, logistic regression is significantly better on PR-AUC (+0.038, interval 0.008 to 0.070). The bootstrap also exposed a trap: pooling out-of-fold scores across folds inflates ranking metrics (a constant baseline scores ROC 0.44), so ranking metrics are computed within folds and averaged. We kept logistic regression for its transparency and its edge in the period most like Ghana, and do not claim it is more accurate overall.
 
+| Model | PR-AUC, all | F1, all | PR-AUC, Dec 2022 on | F1, Dec 2022 on |
+|---|---|---|---|---|
+| Majority class | 0.049 [0.044, 0.056] | 0 | 0.108 [0.093, 0.124] | 0 |
+| Logistic regression | 0.143 [0.122, 0.173] | 0.202 [0.178, 0.224] | 0.202 [0.168, 0.250] | 0.236 [0.203, 0.267] |
+| Shallow LightGBM | 0.130 [0.112, 0.159] | 0.185 [0.167, 0.203] | 0.165 [0.139, 0.207] | 0.223 [0.195, 0.254] |
+
+: Estimates with 95% bootstrap intervals (1,000 customer-level replicates; F1 at the 0.062 threshold; the Section 5 models, with calendar features; `reports/07_classification_ci.csv`).
+
 # 7. Derivations (LO3)
 
-The notebook derives the log-loss, gradient $\frac{1}{n}X^\top(p - y)$ and Hessian $\frac{1}{n}X^\top W X$ of logistic regression and shows that the loss is convex. It derives the normal equation $\hat\beta = (X^\top X)^{-1}X^\top y$ and the ridge solution, and gradient boosting with log-loss (pseudo-residuals $y - p$, Newton leaf values $\sum(y-p) / (\sum p(1-p) + \lambda)$). Each is checked on our data: our Newton solver matches scikit-learn to five decimals. Two results connect to the models. The full regression design is rank-deficient (rank 35 of 40 columns), so ridge is needed for a unique solution. And a full Newton boosting step diverges with rare defaults because the curvature $p(1-p)$ is tiny, which is why boosting needs a learning rate.
+`notebooks/08_derivations.ipynb` derives the log-loss, gradient $\frac{1}{n}X^\top(p - y)$ and Hessian $\frac{1}{n}X^\top W X$ of logistic regression and shows that the loss is convex. It derives the normal equation $\hat\beta = (X^\top X)^{-1}X^\top y$ and the ridge solution, and gradient boosting with log-loss (pseudo-residuals $y - p$, Newton leaf values $\sum(y-p) / (\sum p(1-p) + \lambda)$). Each is checked on our data: our Newton solver matches scikit-learn to five decimals. Two results connect to the models. The full regression design is rank-deficient (rank 35 of 40 columns), so ridge is needed for a unique solution. And a full Newton boosting step diverges with rare defaults because the curvature $p(1-p)$ is tiny, which is why boosting needs a learning rate.
 
 # 8. Interpretation and reason codes (Part B7)
 
@@ -144,13 +191,13 @@ The cost matrix uses our own figures. The default rule and the timing of `Lender
 
 # 13. Reproducibility
 
-Everything in this report is produced by the code in the repository, with `random_state = 42` throughout and package versions pinned in `requirements.txt`. With the data files in `data/raw/` (sources in `data/README.md`), `make` reruns the thirteen notebooks in order, the tests, the claim check, this report and the slides in about 15 minutes on a laptop. `scripts/verify_claims.py` recomputes 62 of the numbers quoted here from the raw files, independently of the notebooks, and `reports/claims_table.md` lists where each one comes from. The saved model ships in `models/nkwapay-v1.joblib`, and `python scripts/score.py examples/application_repeat.json` scores an application without any training data. The raw data is not in the repository because the Zindi and Findex terms do not allow redistribution.
+Everything in this report is produced by the code in the repository, with `random_state = 42` throughout and package versions pinned in `requirements.txt`. With the data files in `data/raw/` (sources in `data/README.md`), `make` reruns the thirteen notebooks in order, the tests, the claim check, this report and the slides in about 15 minutes on a laptop. `scripts/verify_claims.py` recomputes 71 of the numbers quoted here from the raw files, independently of the notebooks, and `reports/claims_table.md` lists where each one comes from. The saved model ships in `models/nkwapay-v1.joblib`, and `python scripts/score.py examples/application_repeat.json` scores an application without any training data. The raw data is not in the repository because the Zindi and Findex terms do not allow redistribution.
 
 # 14. AI-use declaration
 
 Declared under the course AI policy (brief, Appendix B3). We used an AI assistant (Claude Code) to scaffold the repository, to draft and debug the notebook, module and script code, to draft report and slide text, and to rerun the notebooks and recheck the quoted numbers.
 
-- Every number in the report comes from a notebook. Sixty-two of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
+- Every number in the report comes from a notebook. Seventy-one of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
 - AI-drafted statements that did not match the outputs were corrected, for example the direction of the "loan size" reason code and the share of co-funded Ghana loans.
 - The regulatory mapping was written from the legal texts in `docs/legal/`.
 - Each member's individual reflection gives their own declaration.

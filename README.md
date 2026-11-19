@@ -20,7 +20,7 @@ Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and asse
 | Ghana | 87% unseen products, 96% unseen lenders, domain AUC 1.0. No automated Ghana decisions before a pilot |
 | Service | `Scorer.score()` → P(default), approve/decline/refer, 3 reasons, offer; ~20 ms per call. Saved model shipped in `models/nkwapay-v1.joblib` |
 | Fairness cost | A 10% starter loan for applicants with no repayment record costs about 1% of portfolio value and stops 539 good borrowers being turned away |
-| Checked | `make verify` recomputes 62 quoted numbers from the raw files; all 62 reproduce (`reports/claims_table.md`) |
+| Checked | `make verify` recomputes 71 quoted numbers from the raw files; all 71 reproduce (`reports/claims_table.md`) |
 
 ## Where each part of the brief is answered
 
@@ -30,7 +30,7 @@ The brief suggests four notebooks (`01_eda`, `02_classification`, `03_regression
 |---|---|
 | Part A, framing and cost matrix | `01_problem_framing` |
 | `01_eda` (Part B1) | `02_eda` |
-| `02_classification` (Part B2 to B7) | `03_features`, `04_validation`, `05_classification`, `07_noise_floor`, `08_derivations`, `09_reason_codes`, `13_rubric_additions` (confusion matrix, approval-rate goal) |
+| `02_classification` (Part B2 to B7) | `03_features`, `04_validation`, `05_classification`, `07_noise_floor`, `08_derivations`, `09_reason_codes`, `13_rubric_additions` (confusion matrix, approval-rate goal, Platt and isotonic recalibration) |
 | `03_regression` (Part B4 to B5) | `06_regression`, `08_derivations` |
 | `04_transfer_and_fairness` (Parts C and D) | `10_ghana_transfer`, `11_ethics_regulation`, `13_rubric_additions` (PR-AUC and F1 by segment) |
 | Part E, scoring service | `12_scoring_service`, `src/scoring.py` |
@@ -54,10 +54,11 @@ models/           the saved scoring service, nkwapay-v1.joblib (20 KB; rebuilt b
 notebooks/        one notebook per section, 01 to 13
 reports/          report, claims table, figures and result tables
 scripts/          run_all.sh (everything), verify_claims.py (recheck numbers), score.py (score one application),
-                  build_audit.py (assemble the audit), make_submission.py (Zindi submission file)
+                  build_audit.py (assemble the audit), make_submission.py (Zindi submission file),
+                  threshold_sweep.py (precision, recall and F1 at swept thresholds, from saved results)
 slides/           debrief deck and its build script
 src/              shared code: data, features, models, validation, costs, bootstrap, reasons, scoring
-tests/            33 pytest checks (data, leakage replay, loan merge, reasons, scoring service, shipped model)
+tests/            39 pytest checks (data, leakage replay, merge_asof equivalence, recalibration time safety, loan merge, reasons, scoring service, shipped model)
 ```
 
 ## Score an application (no data needed)
@@ -82,7 +83,7 @@ python3 -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\
 pip install -r requirements.txt
 ```
 
-Python 3.11 or newer (tested on 3.13). The report also needs `pandoc`; the PDF version needs `xelatex` and is skipped if it is not installed.
+Python 3.11 or newer (tested on 3.13). The report also needs `pandoc`; the PDF version needs `xelatex` or `tectonic` and is skipped if neither is installed.
 
 ### 2. Put the data in `data/raw/`
 
@@ -110,8 +111,8 @@ This takes about 15 minutes. It checks the data, runs notebooks 01 to 13 in orde
 | Command | What it does |
 |---|---|
 | `make check` | confirms the raw files are present with the expected shapes |
-| `make test` | runs the 33 tests |
-| `make verify` | recomputes 62 quoted numbers from the raw files (about 15 seconds) |
+| `make test` | runs the 39 tests (the shipped-model, merge_asof and recalibration tests need no data) |
+| `make verify` | recomputes 71 quoted numbers from the raw files (about 15 seconds) |
 | `make report` | rebuilds the report and the audit document |
 | `make slides` | rebuilds the debrief deck |
 | `make score` | scores the example applications |
@@ -159,7 +160,7 @@ ICS553 Machine Learning Essentials · MICS 2028 · Group 3
 
 | Member | GitHub | Led |
 |---|---|---|
-| Mubarak Tijani | `Xenongt1` | Repository and pipeline; features, validation design, classification and the operating point; scoring service |
+| Mubarak Tijani | `Xenongt1` | Repository and pipeline; features, validation design, classification and the operating point; scoring service; number check |
 | Eric Elikplim Sunu | `ElikplimSunu` | Regression for the loan limit; noise floor; derivations; reason codes |
 | Clifford Yeboah | `YCliffe21` | Problem framing and cost matrix; exploratory analysis; Kenya to Ghana transfer |
 | Adzeyena Opei | `AdzeyenaOpei` | Ethics and regulation, Model Card, Datasheet and decline letter; report and slides |
@@ -188,7 +189,7 @@ Each member submits an individual reflection separately.
 
 Declared under the course AI policy (brief, Appendix B3). We used an AI assistant (Claude Code) to scaffold the repository, to draft and debug the notebook, module and script code, to draft report and slide text, and to rerun the notebooks and recheck the quoted numbers.
 
-- Every number in the report comes from a notebook. Sixty-two of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
+- Every number in the report comes from a notebook. Seventy-one of them are recomputed from the raw files by `scripts/verify_claims.py` and traced in `reports/claims_table.md`.
 - AI-drafted statements that did not match the outputs were corrected, for example the direction of the "loan size" reason code and the share of co-funded Ghana loans.
 - The regulatory mapping was written from the legal texts in `docs/legal/`.
 - Each member's individual reflection gives their own declaration.

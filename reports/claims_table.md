@@ -1,6 +1,6 @@
 # Claims table
 
-Every number below is quoted in the report, the README or the slides. The "Source" column says which notebook produces it, and the ID is the check in `scripts/verify_claims.py` that recomputes it from the raw files. Run `make verify` to recheck all of them; the last run reproduced 62 of 62.
+Every number below is quoted in the report, the README or the slides. The "Source" column says which notebook produces it, and the ID is the check in `scripts/verify_claims.py` that recomputes it from the raw files. Run `make verify` to recheck all of them; the last run reproduced 71 of 71.
 
 Numbers that are not in this table (for example the bootstrap intervals, the regression errors and the domain-classifier AUC) come straight from the notebook named beside them in the report and are saved in `reports/*.csv`. They are not independently recomputed.
 
@@ -68,3 +68,12 @@ Numbers that are not in this table (for example the bootstrap intervals, the reg
 | C60 | Same share with the ridge limit and first-loan cap | 4.6% | `13_rubric_additions` §13.8 |
 | C61 | Cut in money reaching eventual defaulters | 87% | `13_rubric_additions` §13.8 |
 | C62 | Good borrowers offered their full request | 43% | `13_rubric_additions` §13.8 |
+| C63 | Brier score from Dec 2022, raw scores (folds 3 and 4) | 0.1005 | `13_rubric_additions` §13.9 |
+| C64 | Same, after Platt scaling on the latest fold | 0.0917 | `13_rubric_additions` §13.9 |
+| C65 | Platt slope fitted on 2023 outcomes (fold 4) | 0.30 | `13_rubric_additions` §13.9 |
+| C66 | Fold 3 mean predicted default rate after Platt on the latest fold (12.9% observed) | 5.6% | `13_rubric_additions` §13.9 |
+| C67 | Fold 4 mean predicted default rate after Platt on the latest fold (8.8% observed) | 9.6% | `13_rubric_additions` §13.9 |
+| C68 | Value change from Dec 2022, isotonic on the latest fold | +GHS 1,891 per 1,000 | `13_rubric_additions` §13.9 |
+| C69 | Value change from Dec 2022, Platt on all history | -GHS 1,625 per 1,000 | `13_rubric_additions` §13.9 |
+| C70 | Fold 3 value change, Platt on the latest fold (first window after the shift) | -GHS 9,521 per 1,000 | `13_rubric_additions` §13.9 |
+| C71 | Fold 4 value change, Platt on the latest fold | +GHS 6,864 per 1,000 | `13_rubric_additions` §13.9 |
