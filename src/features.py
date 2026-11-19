@@ -150,10 +150,15 @@ def loan_features(loans: pd.DataFrame) -> pd.DataFrame:
     }, index=loans.index)
 
 
-def build_features(loans: pd.DataFrame, lag_days: int = LABEL_LAG_DAYS, prior=None) -> pd.DataFrame:
-    """All row-wise features for `loans` (no fitting, so safe to compute once before CV)."""
-    return pd.concat([loans[CATEGORICAL].astype(str), loan_features(loans), history_features(loans, lag_days, prior),
-                      calendar_features(loans), macro_features(loans)], axis=1)
+def build_features(loans: pd.DataFrame, lag_days: int = LABEL_LAG_DAYS, prior=None, macro: bool = True) -> pd.DataFrame:
+    """All row-wise features for `loans` (no fitting, so safe to compute once before CV).
+
+    `macro=False` skips the macro block, which reads data/raw/economic_indicators.csv. The deployed
+    model does not use it (Section 3.4), so the scoring service passes False and runs without the data.
+    """
+    parts = [loans[CATEGORICAL].astype(str), loan_features(loans), history_features(loans, lag_days, prior),
+             calendar_features(loans)]
+    return pd.concat(parts + ([macro_features(loans)] if macro else []), axis=1)
 
 
 class RareCategoryGrouper(BaseEstimator, TransformerMixin):
