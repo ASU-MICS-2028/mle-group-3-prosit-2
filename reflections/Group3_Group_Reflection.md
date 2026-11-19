@@ -33,7 +33,7 @@ The PBL return stage asks the group one question: did we find a solution? This p
 
 # What we would do differently
 
-- **Spread the work and make it visible.** Of the 29 commits on `main` (merges excluded), 26 are under one account, and every section was first committed on 29 October from that account. The table above credits four leads; the history cannot show it. Next time each lead works on a section branch and opens a pull request that another member reviews.
+- **Spread the work and make it visible.** Of the 27 commits on `main` before 19 November (merges excluded), 26 are under one account, and every section was first committed on 29 October from that account. The table above credits four leads; the history cannot show it. Next time each lead works on a section branch and opens a pull request that another member reviews.
 - **Test a recommendation before we write it.** "Recalibrate monthly" sat in our report and Model Card from 29 October. When we tested recalibration out of time on 19 November, fitting on outcomes from before the December 2022 shift made the first window worse (GHS -9,521 per 1,000) and only the next window gained (GHS +6,864; claims C70, C71). We changed the advice to recent outcomes only, with human review after a shift.
 - **Put the client questions in the action plan.** The default rule and NkwaPay's real Ghana fee stayed open to the end. At the fee Kenya charged on 7-day loans (1.4%), the break-even threshold for those loans would be 1.9%, not 6.2%. We would ask both in the first week.
 
