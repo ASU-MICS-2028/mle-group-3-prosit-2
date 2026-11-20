@@ -18,6 +18,11 @@ Decision policy (Sections 5, 6, 10 and 11):
                market the model was not trained for (Section 10)
 - approve      otherwise; offered amount = min(requested, predicted limit),
                capped further for first loans (Section 6.2)
+
+The amounts come from a Policy (src/policy.py), passed at scoring time, so
+NkwaPay can change the first-loan cap, the starter share or a market maximum
+without retraining. A referral also returns `review`: a suggested starter
+amount that is the reviewer's ceiling (lower or decline, never raise).
 """
 import time
 from dataclasses import dataclass, field
@@ -31,6 +36,7 @@ from src import models as M
 from src.config import MODELS
 from src.costs import LoanEconomics
 from src.data import load_loans
+from src.policy import Policy, approved_offer, review_block, starter_suggestion
 from src.reasons import TEXT, ReasonCoder
 
 VERSION = "nkwapay-v1"
@@ -123,8 +129,13 @@ class Scorer:
                               "Lender_portion_Funded": float})
         return F.build_features(loans, prior=self.prior, macro=False).iloc[[-1]]
 
-    def score(self, application: dict, history=None) -> dict:
+    def default_policy(self) -> Policy:
+        return Policy.default(self.starter_cap)
+
+    def score(self, application: dict, history=None, policy: Policy = None) -> dict:
         t0 = time.perf_counter()
+        policy = (policy or self.default_policy()).validate()
+        market = application["country_id"]
         X = self.features(application, history)
         p = float(self.classifier.predict_proba(X[M.inputs(M.DEPLOY_FEATURES)])[:, 1][0])
         top = self.reasons.top_reasons(X[M.inputs(M.DEPLOY_FEATURES)])[0]
@@ -145,16 +156,18 @@ class Scorer:
             decision, note = "approve", ""
         if past_default and not any(r["code"] == "REPAYMENT" for r in top):
             top = [{"code": "REPAYMENT", "log_odds": None, "text": TEXT["REPAYMENT"]}] + top[:2]
-        offer = None
+        offer, review = None, None
         if decision == "approve":
-            offer = min(requested, limit)
-            if thin_file:
-                offer = min(offer, self.starter_cap)
+            offer = approved_offer(requested, limit, thin_file, market, policy)
+        elif decision == "refer":
+            suggested, why = starter_suggestion(requested, limit, market, market in TRAINED_MARKETS, policy)
+            review = review_block(suggested, why, market)
         return {
             "model_version": self.version, "p_default": round(p, 4), "threshold": round(self.threshold, 4),
             "decision": decision, "note": note,
             "reasons": top if decision != "approve" else [],
             "requested_amount": requested, "suggested_limit": round(limit, 2),
             "offered_amount": None if offer is None else round(offer, 2),
+            "review": review,
             "latency_ms": round((time.perf_counter() - t0) * 1000, 2),
         }

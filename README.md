@@ -61,8 +61,8 @@ scripts/          run_all.sh (everything), verify_claims.py (recheck numbers), s
                   build_audit.py (assemble the audit), make_submission.py (Zindi submission file),
                   threshold_sweep.py (precision, recall and F1 at swept thresholds, from saved results)
 slides/           debrief deck and its build script
-src/              shared code: data, features, models, validation, costs, bootstrap, reasons, scoring
-tests/            39 pytest checks (data, leakage replay, merge_asof equivalence, recalibration time safety, loan merge, reasons, scoring service, shipped model)
+src/              shared code: data, features, models, validation, costs, bootstrap, reasons, scoring, policy
+tests/            49 pytest checks (data, leakage replay, lending policy and reviewer step, merge_asof equivalence, recalibration time safety, loan merge, reasons, scoring service, shipped model)
 ```
 
 ## Score an application (no data needed)
@@ -75,6 +75,18 @@ python scripts/score.py examples/application_decline.json
 The file holds one `application` and the applicant's earlier loans as `history`; the fields are listed in notebook 12 and in `src/scoring.py`. The answer is JSON with the default probability, the decision (`approve`, `decline` or `refer`), up to three plain-language reasons and the offered amount. `make score` runs all five examples. The examples are invented; they are not rows from the data.
 
 The saved model holds the fitted coefficients, the preprocessing averages and the threshold. It contains no loan records.
+
+### Lending policy and the reviewer step
+
+The model decides the risk; a `Policy` (`src/policy.py`) decides the money. It is passed at scoring time, `scorer.score(application, history, policy)`, so NkwaPay can change the amounts without retraining, and changing them never changes the risk, the decision or the reasons.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `first_loan_cap` | Kenya 5,000 KES; Ghana not set | Largest first loan per market. Kenya's default is the median repaid first loan in the data. Ghana needs a cedi amount before any pilot loan can be offered. |
+| `starter_share` | 10% | A referred first-time applicant is offered this share of what an approval would get (cost in Section 13.5). |
+| `max_loan` | none | Per-customer maximum per market, for the limit the Bank of Ghana sets (Directive s.3.5(5)). |
+
+Approvals stay automatic: the same applicant gets the same offer. A referral returns `review` with a suggested starter amount that is also the ceiling. `record_review(result, application, amount, reviewer, reason, log_path)` accepts the reviewer's decision only if the application was referred, the amount is between 0 (decline) and the ceiling, and a reviewer and a reason are given; each decision is written to a JSON-lines log, so reviewers' choices can be audited for consistency. The Directive (s.2.3(1)) bars manual approval at a physical office, so the review is a digital step within the suggested range. The web app has the policy settings in the sidebar and the reviewer step under a referral.
 
 ## Web app
 
@@ -130,7 +142,7 @@ This takes about 15 minutes. It checks the data, runs notebooks 01 to 13 in orde
 | Command | What it does |
 |---|---|
 | `make check` | confirms the raw files are present with the expected shapes |
-| `make test` | runs the 39 tests (the shipped-model, merge_asof and recalibration tests need no data) |
+| `make test` | runs the 49 tests (the shipped-model, policy, merge_asof and recalibration tests need no data) |
 | `make verify` | recomputes 71 quoted numbers from the raw files (about 15 seconds) |
 | `make report` | rebuilds the report and the audit document |
 | `make slides` | rebuilds the debrief deck |
