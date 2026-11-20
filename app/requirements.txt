@@ -1,0 +1,10 @@
+# Runtime packages for the web app only (the full project uses ../requirements.txt).
+# scikit-learn must match the version the saved model was built with.
+streamlit==1.45.1
+numpy==2.5.3
+pandas==2.2.3
+scipy==1.18.1
+scikit-learn==1.6.1
+lightgbm==4.6.0
+imbalanced-learn==0.13.0
+joblib==1.4.2
