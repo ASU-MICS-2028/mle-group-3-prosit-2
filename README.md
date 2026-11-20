@@ -1,10 +1,12 @@
 # NkwaPay Credit Scoring (ICS553 Prosit 2)
 
-Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and assessed for transfer to Ghana. Debrief: **Tuesday 3 November 2026**.
+Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and assessed for transfer to Ghana. Debrief: **Friday 20 November 2026**.
 
-> **Want to try the scorer?** `python scripts/score.py examples/application_repeat.json` works straight after `pip install -r requirements.txt`; the saved model is in `models/` and needs no data. To rerun the whole analysis, follow [Running it on your own machine](#running-it-on-your-own-machine).
+**Live app:** https://nkwapay-scorer.streamlit.app (enter an application or load an example; the decision, reasons and offer come from the shipped model).
 
-**Deliverables:** report `reports/NkwaPay_Report_Group3.pdf` (also `.docx`; source `reports/report.md`) · ethical and regulatory audit `reports/NkwaPay_Audit_Group3.pdf` · debrief deck `slides/NkwaPay_Debrief_Present.pptx` (18 slides presented on 20 November, scripts in the speaker notes; full reading version with the backup slides for questions `slides/NkwaPay_Debrief_Simple.pptx`; technical version `slides/NkwaPay_Debrief_Group3.pptx`, built by `make slides`) · Model Card `docs/model_card.md` · Datasheet `docs/datasheet.md` · decline letter `docs/decline_letter.md` · AI-use declaration `docs/ai_use_declaration.md`.
+> **Want to try the scorer?** Open the [live app](https://nkwapay-scorer.streamlit.app), or run `python scripts/score.py examples/application_repeat.json` works straight after `pip install -r requirements.txt`; the saved model is in `models/` and needs no data. To rerun the whole analysis, follow [Running it on your own machine](#running-it-on-your-own-machine).
+
+**Deliverables:** report `reports/NkwaPay_Report_Group3.pdf` (also `.docx`; source `reports/report.md`) · ethical and regulatory audit `reports/NkwaPay_Audit_Group3.pdf` · debrief deck `slides/NkwaPay_Debrief_Present.pptx` (18 slides presented on 20 November, scripts in the speaker notes; full reading version with the backup slides for questions `slides/NkwaPay_Debrief_Simple.pptx`; technical version `slides/NkwaPay_Debrief_Group3.pptx`, built by `make slides`) · Model Card `docs/model_card.md` · Datasheet `docs/datasheet.md` · decline letter `docs/decline_letter.md` · AI-use declaration `docs/ai_use_declaration.md` · web app `app/app.py`, live at https://nkwapay-scorer.streamlit.app.
 
 ## Headline results
 
@@ -18,6 +20,7 @@ Default prediction and loan sizing for NkwaPay, trained on Kenyan loans and asse
 | Pricing check | At the fees in the Kenyan data (1.4% on a 7-day loan) the break-even threshold for 7-day loans is 1.9%, so the threshold must be set per product |
 | Loan size | Ridge on log amount (repaid loans), median error ~1,930 KES; the limit cuts money reaching eventual defaulters by 87% |
 | Ghana | 87% unseen products, 96% unseen lenders, domain AUC 1.0. No automated Ghana decisions before a pilot |
+| Web app | [nkwapay-scorer.streamlit.app](https://nkwapay-scorer.streamlit.app): the same `Scorer` behind a form; product-type dropdown with what the data shows about each product |
 | Service | `Scorer.score()` → P(default), approve/decline/refer, 3 reasons, offer; ~20 ms per call. Saved model shipped in `models/nkwapay-v1.joblib` |
 | Fairness cost | A 10% starter loan for applicants with no repayment record costs about 1% of portfolio value and stops 539 good borrowers being turned away |
 | Checked | `make verify` recomputes 71 quoted numbers from the raw files; all 71 reproduce (`reports/claims_table.md`) |
@@ -46,6 +49,7 @@ To edit the diagram, open `docs/architecture.drawio.svg` in draw.io (app.diagram
 ## Layout
 
 ```
+app/              web app (Streamlit) for the scorer, its requirements and deploy notes
 data/raw/         raw files (gitignored, see data/README.md)
 data/processed/   features and out-of-fold predictions (gitignored, rebuilt by the notebooks)
 docs/             Model Card, Datasheet, decline letter, AI declaration, architecture diagram (draw.io), legal texts
@@ -71,6 +75,21 @@ python scripts/score.py examples/application_decline.json
 The file holds one `application` and the applicant's earlier loans as `history`; the fields are listed in notebook 12 and in `src/scoring.py`. The answer is JSON with the default probability, the decision (`approve`, `decline` or `refer`), up to three plain-language reasons and the offered amount. `make score` runs all five examples. The examples are invented; they are not rows from the data.
 
 The saved model holds the fitted coefficients, the preprocessing averages and the threshold. It contains no loan records.
+
+## Web app
+
+**Live:** https://nkwapay-scorer.streamlit.app · locally: `streamlit run app/app.py` (after `pip install -r requirements.txt` and `pip install streamlit`).
+
+A form in front of the same `Scorer` as `scripts/score.py`, so the answers are identical (checked on all five examples). You can:
+
+- load one of the five example applications, or enter your own: country, product type, new or repeat borrower, amount, term, date, lender and lender share;
+- pick the product type from a dropdown. The data gives product codes only, so each option shows what the data says about it: how many Kenyan loans it had, their default rate, the typical amount and term, and whether the model learned it separately (11 products), groups it with the rare products (11 with fewer than 30 loans) or has never seen it (Type_3 and Type_8, which occur only in Ghana);
+- add, edit or delete the applicant's earlier loans (outcome 0 repaid, 1 defaulted, blank not yet due);
+- see the decision (approve, decline or refer), the chance of default against the 6.2% threshold, up to three plain-language reasons and the amount offered.
+
+Every application from outside Kenya is referred to a person. The model still computes a probability for it, but with no Ghanaian repayment outcomes that number cannot be checked (Section 10), so it is shown for information only.
+
+The live app is deployed on Streamlit Community Cloud from a copy of `app/`, `src/`, `models/` and `examples/` in [Xenongt1/nkwapay-scorer](https://github.com/Xenongt1/nkwapay-scorer), because the ASU-MICS-2028 organisation does not allow third-party apps to read its repositories. Changes to the app must be copied there. Deploy steps are in `app/README.md`. No loan data is uploaded.
 
 ## Running it on your own machine
 
@@ -160,7 +179,7 @@ ICS553 Machine Learning Essentials · MICS 2028 · Group 3
 
 | Member | GitHub | Led |
 |---|---|---|
-| Mubarak Tijani | `Xenongt1` | Repository and pipeline; features, validation design, classification and the operating point; scoring service; number check |
+| Mubarak Tijani | `Xenongt1` | Repository and pipeline; features, validation design, classification and the operating point; scoring service; number check; web app |
 | Eric Elikplim Sunu | `ElikplimSunu` | Regression for the loan limit; noise floor; derivations; reason codes |
 | Clifford Yeboah | `YCliffe21` | Problem framing and cost matrix; exploratory analysis; Kenya to Ghana transfer |
 | Adzeyena Opei | `AdzeyenaOpei` | Ethics and regulation, Model Card, Datasheet and decline letter; report and slides |
@@ -182,6 +201,7 @@ ICS553 Machine Learning Essentials · MICS 2028 · Group 3
 | 12 Scoring service (Part E) | Mubarak Tijani | `12_scoring_service.ipynb`, `src/scoring.py`, `scripts/score.py`, `models/` |
 | Report and slides | Adzeyena Opei | `reports/`, `slides/` |
 | Number check | Mubarak Tijani | `scripts/verify_claims.py`, `reports/claims_table.md` |
+| Web app | Mubarak Tijani | `app/`, live at https://nkwapay-scorer.streamlit.app |
 
 Each member submits an individual reflection separately; the group's review is `reflections/Group3_Group_Reflection.md`.
 
