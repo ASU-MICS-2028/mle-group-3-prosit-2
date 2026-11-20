@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 warnings.filterwarnings("ignore", category=FutureWarning)
 
+from src.policy import Policy, record_review  # noqa: E402
 from src.scoring import Scorer  # noqa: E402
 
 EXAMPLES = {
@@ -108,6 +109,7 @@ def load_example(name):
         "history": hist,
     })
     st.session_state.pop("history_editor", None)
+    st.session_state.pop("scored", None)
 
 
 scorer = load_scorer()
@@ -139,6 +141,19 @@ with st.sidebar:
         "- **Refer** first-time applicants above the threshold (starter loan or human review), "
         "and every non-Kenyan application, because the model is not validated outside Kenya."
     )
+    st.divider()
+    st.subheader("Lending policy")
+    st.caption("Amounts NkwaPay sets. Changing them needs no retraining and never changes the risk or the decision.")
+    kenya_cap = st.number_input("First-loan cap, Kenya (KES)", min_value=1.0, value=float(scorer.starter_cap),
+                                step=500.0, help="Largest first loan. Default: median repaid first loan in the data.")
+    starter_pct = st.slider("Starter loan for referrals (% of usual offer)", 1, 50, 10,
+                            help="Report section 13.5 costs a 10% starter loan at about 1% of portfolio value.")
+    ghana_cap = st.number_input("First-loan cap, Ghana (GHS, 0 = not set)", min_value=0.0, value=0.0, step=50.0,
+                                help="Ghana has no default: a reviewer can only offer a pilot loan once this is set.")
+    kenya_max = st.number_input("Maximum per customer, Kenya (KES, 0 = none)", min_value=0.0, value=0.0,
+                                step=1000.0, help="For a limit set by the regulator (BoG Directive s.3.5(5)).")
+policy = Policy(first_loan_cap={"Kenya": kenya_cap, **({"Ghana": ghana_cap} if ghana_cap > 0 else {})},
+                starter_share=starter_pct / 100, max_loan={"Kenya": kenya_max} if kenya_max > 0 else {})
 
 left, right = st.columns([3, 2], gap="large")
 
@@ -180,37 +195,42 @@ with left:
     )
     go = st.button("Score application", type="primary", use_container_width=True)
 
+if go:
+    application = {
+        "customer_id": st.session_state["customer_id"],
+        "country_id": st.session_state["country_id"],
+        "loan_type": "Unknown" if st.session_state["loan_type"] == NEW_PRODUCT else st.session_state["loan_type"],
+        "lender_id": int(st.session_state["lender_id"]),
+        "lenders": [{"lender_id": int(st.session_state["lender_id"]),
+                     "share": float(st.session_state["share"]) / int(st.session_state["n_lenders"])}]
+        * int(st.session_state["n_lenders"]),
+        "Total_Amount": float(st.session_state["amount"]),
+        "duration": int(st.session_state["duration"]),
+        "application_date": st.session_state["application_date"].isoformat(),
+        "New_versus_Repeat": st.session_state["repeat"],
+    }
+    rows = history.dropna(how="all")
+    try:
+        past = [{k: (None if pd.isna(v) else v) for k, v in r.items()} for r in rows.to_dict("records")]
+        for r in past:
+            pd.Timestamp(r["disbursement_date"]), pd.Timestamp(r["due_date"])
+        st.session_state["scored"] = {"application": application, "result": scorer.score(application, past, policy)}
+    except Exception as exc:  # show input problems instead of a stack trace
+        st.session_state.pop("scored", None)
+        st.session_state["score_error"] = str(exc)
+    else:
+        st.session_state.pop("score_error", None)
+
 with right:
     st.subheader("Decision")
-    if not go:
+    if st.session_state.get("score_error"):
+        st.error(f"Could not score this application: {st.session_state['score_error']}. "
+                 "Check the dates and numbers in the earlier loans.")
+    elif "scored" not in st.session_state:
         st.info("Fill in the application (or load an example) and press **Score application**.")
     else:
-        application = {
-            "customer_id": st.session_state["customer_id"],
-            "country_id": st.session_state["country_id"],
-            "loan_type": "Unknown" if st.session_state["loan_type"] == NEW_PRODUCT else st.session_state["loan_type"],
-            "lender_id": int(st.session_state["lender_id"]),
-            "lenders": [{"lender_id": int(st.session_state["lender_id"]),
-                         "share": float(st.session_state["share"]) / int(st.session_state["n_lenders"])}]
-            * int(st.session_state["n_lenders"]),
-            "Total_Amount": float(st.session_state["amount"]),
-            "duration": int(st.session_state["duration"]),
-            "application_date": st.session_state["application_date"].isoformat(),
-            "New_versus_Repeat": st.session_state["repeat"],
-        }
-        rows = history.dropna(how="all")
-        try:
-            past = [
-                {k: (None if pd.isna(v) else v) for k, v in r.items()}
-                for r in rows.to_dict("records")
-            ]
-            for r in past:
-                pd.Timestamp(r["disbursement_date"]), pd.Timestamp(r["due_date"])
-            result = scorer.score(application, past)
-        except Exception as exc:  # show input problems instead of a stack trace
-            st.error(f"Could not score this application: {exc}. Check the dates and numbers in the earlier loans.")
-            st.stop()
-
+        application = st.session_state["scored"]["application"]
+        result = st.session_state["scored"]["result"]
         label, colour = DECISION_STYLE.get(result["decision"], (result["decision"], "#383838"))
         st.markdown(
             f"<div style='background:{colour};color:white;padding:14px 18px;border-radius:8px;"
@@ -235,6 +255,42 @@ with right:
                 st.markdown(f"{i}. {r['text']}")
         else:
             st.caption("No reasons are given for an approval.")
+
+        review = result.get("review")
+        if review:
+            st.divider()
+            st.markdown("**Reviewer step**")
+            ceiling = review["max_amount"]
+            if ceiling is None:
+                st.warning(review["note"] + " Use the Ghana cap in the sidebar, then score again.")
+            else:
+                st.caption(f"Suggested starter loan: **{ceiling:,.0f} {review['currency']}**. The reviewer may "
+                           "lower it or decline (0), never raise it, and must give a reason. Each decision is logged.")
+                with st.form("review_form", clear_on_submit=False):
+                    amount = st.number_input(f"Amount to offer ({review['currency']})", min_value=0.0,
+                                             max_value=float(ceiling), value=float(ceiling), step=50.0)
+                    reviewer = st.text_input("Reviewer", placeholder="e.g. reviewer-07")
+                    reason = st.text_area("Reason", placeholder="e.g. mobile-money income confirmed; full starter loan")
+                    submitted = st.form_submit_button("Record decision", use_container_width=True)
+                if submitted:
+                    try:
+                        rec = record_review(result, application, amount, reviewer, reason)
+                    except ValueError as exc:
+                        st.error(str(exc))
+                    else:
+                        st.session_state.setdefault("review_log", []).append(rec)
+                        what = (f"Starter loan of {rec['offered_amount']:,.0f} {rec['currency']}"
+                                if rec["outcome"] == "starter_loan" else "Declined by the reviewer")
+                        st.success(f"Recorded: {what}.")
+
         st.caption(f"Scored in {result['latency_ms']:.0f} ms · model {result['model_version']}")
         with st.expander("Full response (JSON)"):
             st.json(result)
+
+if st.session_state.get("review_log"):
+    st.subheader("Review log (this session)")
+    log = pd.DataFrame(st.session_state["review_log"])
+    st.dataframe(log[["time", "customer_id", "market", "p_default", "suggested_amount", "offered_amount", "currency",
+                      "outcome", "lowered", "reviewer", "reason"]], use_container_width=True, hide_index=True)
+    st.download_button("Download log (JSON lines)", "\n".join(log.apply(lambda r: r.to_json(), axis=1)),
+                       file_name="review_log.jsonl", mime="application/json")
