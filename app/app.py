@@ -27,6 +27,54 @@ EXAMPLES = {
     "First loan (no record)": "application_first_loan.json",
     "Ghana applicant": "application_ghana.json",
 }
+# Product types: the data gives codes only, no descriptions. These figures are from the
+# Kenyan training loans (one row per loan) and the Test applications; see notebooks 02 and 10.
+# (loans in Kenya, default rate, median amount, median term in days, Ghana applications)
+PRODUCTS = {
+    "Type_1": (61723, 0.0084, 4930, 7, 0), "Type_7": (1646, 0.0844, 5906, 7, 0),
+    "Type_5": (1166, 0.0832, 18000, 14, 0), "Type_4": (872, 0.1284, 30000, 30, 0),
+    "Type_10": (319, 0.0282, 101347, 29, 0), "Type_6": (255, 0.1176, 4490, 7, 0),
+    "Type_9": (205, 0.1756, 20200, 30, 0), "Type_14": (99, 0.7172, 10000, 30, 0),
+    "Type_2": (74, 0.6081, 150000, 136, 274), "Type_11": (42, 0.0476, 8114, 30, 0),
+    "Type_18": (30, 0.0333, 2950, 30, 0), "Type_12": (21, 0.0476, 15600, 14, 0),
+    "Type_20": (13, 0.5385, 202730, 30, 0), "Type_17": (13, 0.0, 12286, 7, 0),
+    "Type_23": (12, 0.75, 1169944, 90, 0), "Type_13": (10, 0.0, 500, 30, 0),
+    "Type_16": (6, 0.0, 24472, 11, 0), "Type_15": (4, 0.75, 15000000, 183, 0),
+    "Type_24": (3, 0.0, 15000, 7, 0), "Type_21": (3, 0.0, 289000, 30, 0),
+    "Type_19": (3, 0.0, 515665, 912, 0), "Type_22": (1, 0.0, 46080, 15, 0),
+    "Type_3": (0, None, None, None, 1782), "Type_8": (0, None, None, None, 28),
+}
+N_KENYA = 66520
+NEW_PRODUCT = "New product (not listed)"
+
+
+def product_label(code):
+    if code == NEW_PRODUCT:
+        return code
+    n, rate, *_ = PRODUCTS[code]
+    if n == 0:
+        return f"{code} · Ghana only, unknown to the model"
+    tag = "" if n >= 30 else " · rare"
+    return f"{code} · {n:,} Kenyan loans · {rate:.1%} defaulted{tag}"
+
+
+def product_note(code):
+    if code == NEW_PRODUCT:
+        return "A product the model has never seen. It is scored as unknown, with no product information."
+    n, rate, amount, term, ghana = PRODUCTS[code]
+    if n == 0:
+        return (f"Never offered in Kenya; it appears only in {ghana:,} Ghana applications. "
+                "The model has no repayment record for it and scores it as unknown.")
+    text = (f"{n:,} Kenyan loans ({n / N_KENYA:.1%} of all), {rate:.1%} of them defaulted. "
+            f"Typical loan {amount:,.0f} KES over {term:.0f} days.")
+    if n < 30:
+        text += " Too few loans to learn on its own, so the model groups it with the other rare products."
+    else:
+        text += " The model learned this product separately."
+    if ghana:
+        text += f" Also used in {ghana:,} Ghana applications."
+    return text
+
 HISTORY_COLS = ["disbursement_date", "due_date", "Total_Amount", "duration", "lender_id", "target"]
 DECISION_STYLE = {
     "approve": ("Approve", "#2E7D4F"),
@@ -49,7 +97,7 @@ def load_example(name):
     st.session_state.update({
         "customer_id": int(app["customer_id"]),
         "country_id": app["country_id"],
-        "loan_type": app["loan_type"],
+        "loan_type": app["loan_type"] if app["loan_type"] in PRODUCTS else NEW_PRODUCT,
         "lender_id": int(app["lender_id"]),
         "n_lenders": max(1, len(app.get("lenders") or [1])),
         "share": float(sum(l.get("share") or 0 for l in (app.get("lenders") or [])) or 1.0),
@@ -98,8 +146,11 @@ with left:
     st.subheader("Application")
     c1, c2, c3 = st.columns(3)
     c1.selectbox("Country", ["Kenya", "Ghana"], key="country_id")
-    c2.text_input("Product type", key="loan_type", help="e.g. Type_1. Unseen types are treated as unknown.")
+    c2.selectbox("Product type", list(PRODUCTS) + [NEW_PRODUCT], key="loan_type", format_func=product_label,
+                 help="The data gives product codes only, not descriptions. Each option shows how common the "
+                      "product was in Kenya and how often its loans defaulted.")
     c3.radio("Borrower", ["New Loan", "Repeat Loan"], key="repeat", horizontal=True)
+    st.caption(f"**{st.session_state['loan_type']}:** {product_note(st.session_state['loan_type'])}")
     c1, c2, c3 = st.columns(3)
     c1.number_input("Amount requested", min_value=1.0, step=500.0, key="amount",
                     help="Local currency (KES for Kenya, GHS for Ghana).")
@@ -137,7 +188,7 @@ with right:
         application = {
             "customer_id": st.session_state["customer_id"],
             "country_id": st.session_state["country_id"],
-            "loan_type": st.session_state["loan_type"].strip() or "Unknown",
+            "loan_type": "Unknown" if st.session_state["loan_type"] == NEW_PRODUCT else st.session_state["loan_type"],
             "lender_id": int(st.session_state["lender_id"]),
             "lenders": [{"lender_id": int(st.session_state["lender_id"]),
                          "share": float(st.session_state["share"]) / int(st.session_state["n_lenders"])}]
