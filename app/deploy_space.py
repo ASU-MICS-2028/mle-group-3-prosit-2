@@ -14,15 +14,26 @@ from huggingface_hub import HfApi
 
 ROOT = Path(__file__).resolve().parents[1]
 
+DOCKERFILE = """FROM python:3.12-slim
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user PATH=/home/user/.local/bin:$PATH
+WORKDIR /home/user/app
+COPY --chown=user requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+COPY --chown=user . .
+EXPOSE 7860
+CMD ["streamlit", "run", "app/app.py", "--server.port=7860", "--server.address=0.0.0.0", \\
+     "--server.headless=true", "--browser.gatherUsageStats=false"]
+"""
+
 SPACE_README = """---
 title: NkwaPay Loan Scorer
 emoji: 💳
 colorFrom: red
 colorTo: gray
-sdk: streamlit
-sdk_version: 1.45.1
-python_version: "3.12"
-app_file: app/app.py
+sdk: docker
+app_port: 7860
 pinned: false
 short_description: Credit scoring demo, ICS553 Prosit 2 (Group 3)
 ---
@@ -49,9 +60,10 @@ def main():
         shutil.copy(ROOT / "models" / "nkwapay-v1.joblib", stage / "models")
         shutil.copy(ROOT / "app" / "requirements.txt", stage / "requirements.txt")
         (stage / "README.md").write_text(SPACE_README)
+        (stage / "Dockerfile").write_text(DOCKERFILE)
 
         api = HfApi()
-        api.create_repo(args.space_id, repo_type="space", space_sdk="streamlit",
+        api.create_repo(args.space_id, repo_type="space", space_sdk="docker",
                         private=args.private, exist_ok=True)
         api.upload_folder(folder_path=str(stage), repo_id=args.space_id, repo_type="space",
                           commit_message="Deploy NkwaPay scorer")
